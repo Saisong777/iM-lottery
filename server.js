@@ -46,9 +46,29 @@ loadData();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── SSE (Server-Sent Events) ──
+let sseClients = [];
+
+function broadcast(event, data) {
+  const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  sseClients.forEach(res => res.write(msg));
+}
+
 // ══════════════════════════════════════
 //  API ROUTES
 // ══════════════════════════════════════
+
+// SSE endpoint for display page
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  sseClients.push(res);
+  req.on('close', () => {
+    sseClients = sseClients.filter(c => c !== res);
+  });
+});
 
 // GET all data
 app.get('/api/data', (req, res) => {
@@ -137,6 +157,86 @@ app.post('/api/draw', (req, res) => {
   saveData();
 
   res.json({ ok: true, winners: picked, prize: prize.name });
+});
+
+// ── Draw with SSE broadcast ──
+let drawBusy = false;
+
+app.post('/api/draw-start', async (req, res) => {
+  if (drawBusy) return res.status(409).json({ error: '抽獎進行中' });
+  const { prizeIndex } = req.body;
+  const prize = db.prizes[prizeIndex];
+  if (!prize) return res.status(400).json({ error: '獎項不存在' });
+  if (prize.done) return res.status(400).json({ error: '此獎項已抽完' });
+
+  const avail = db.people.filter(p => !p.won);
+  if (!avail.length) return res.status(400).json({ error: '沒有可抽的參與者' });
+
+  drawBusy = true;
+  const count = Math.min(prize.count, avail.length);
+
+  // Fisher-Yates shuffle
+  const pool = [...avail];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const picked = pool.slice(0, count);
+
+  // Mark as won
+  const time = new Date().toLocaleTimeString('zh-TW');
+  picked.forEach(p => {
+    const person = db.people.find(x => x.email === p.email);
+    if (person) person.won = true;
+    db.winners.push({ name: p.name, email: p.email, prizeName: prize.name, time });
+  });
+  prize.done = true;
+  saveData();
+
+  // Respond immediately so admin knows result
+  res.json({ ok: true, winners: picked, prize: prize.name });
+
+  // Broadcast SSE sequence
+  const names = avail.map(p => p.name);
+  broadcast('draw-start', { prizeName: prize.name, count });
+
+  // Countdown 3 seconds, then rolling ~2.5s, then reveal
+  const delay = ms => new Promise(r => setTimeout(r, ms));
+  await delay(3200);
+
+  // Rolling phase: send random names for ~2.5 seconds
+  const rollDur = 2500;
+  const rollInterval = 100;
+  const rollSteps = Math.floor(rollDur / rollInterval);
+  for (let i = 0; i < rollSteps; i++) {
+    const randomName = names[Math.floor(Math.random() * names.length)];
+    broadcast('draw-rolling', { name: randomName });
+    await delay(rollInterval);
+  }
+
+  // Reveal winners
+  if (picked.length === 1) {
+    broadcast('draw-result', { winners: picked.map(w => w.name), prizeName: prize.name });
+  } else {
+    // Reveal one by one with delay
+    for (let i = 0; i < picked.length; i++) {
+      // Roll briefly before each reveal
+      for (let j = 0; j < 12; j++) {
+        broadcast('draw-rolling', { name: names[Math.floor(Math.random() * names.length)] });
+        await delay(100);
+      }
+      broadcast('draw-reveal-one', {
+        name: picked[i].name,
+        index: i,
+        total: picked.length,
+        prizeName: prize.name,
+      });
+      await delay(800);
+    }
+    broadcast('draw-result', { winners: picked.map(w => w.name), prizeName: prize.name });
+  }
+
+  drawBusy = false;
 });
 
 // ── Winners ──

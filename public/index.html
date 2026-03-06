@@ -570,90 +570,27 @@ async function startDraw(){
   const avail=db.people.filter(p=>!p.won);
   if(!avail.length){toast('沒有可抽的參與者！');return;}
   isDrawing=true; document.getElementById('dbtn').disabled=true;
+  document.getElementById('dbtn').textContent='抽獎進行中...';
 
-  // Call API to perform the draw
-  const res=await api('POST','/draw',{prizeIndex:selPrize});
-  if(res.error){toast('⚠️ '+res.error);isDrawing=false;document.getElementById('dbtn').disabled=false;return;}
+  const res=await api('POST','/draw-start',{prizeIndex:selPrize});
+  if(res.error){toast('⚠️ '+res.error);isDrawing=false;document.getElementById('dbtn').disabled=false;document.getElementById('dbtn').textContent='抽　獎';return;}
 
   const picked=res.winners;
   const prizeName=res.prize;
 
-  await countdown(3);
-  if(picked.length===1) await animateSingle(picked[0],avail);
-  else await animateMulti(picked,avail);
+  // Show result in admin (text only, animation is on display page)
+  document.getElementById('slotEl').textContent=picked.map(w=>w.name).join('、');
+  document.getElementById('slotEl').className='slot-name';
+  document.getElementById('mgrid').style.display='none';
 
   // Reload fresh data
   await reload(); renderTable();
   db.prizes[selPrize].done=true;
   renderPsel(); showRecent(prizeName); renderHist();
-  isDrawing=false; document.getElementById('dbtn').disabled=false;
-}
-
-function countdown(n){
-  return new Promise(res=>{
-    const ov=document.getElementById('cdov'),el=document.getElementById('cdnEl');
-    ov.style.display='flex'; let cur=n;
-    function tick(){
-      el.textContent=cur; el.style.animation='none'; el.offsetHeight;
-      el.style.animation='cdp 1s ease-out forwards'; playBeep(cur);
-      if(cur>1){cur--;setTimeout(tick,1000);}
-      else setTimeout(()=>{ov.style.display='none';res();},900);
-    }
-    tick();
-  });
-}
-function animateSingle(winner,avail){
-  return new Promise(res=>{
-    const el=document.getElementById('slotEl');
-    el.className='slot-name rolling';
-    let elapsed=0,interval=80,dur=2600;
-    const roll=setInterval(()=>{
-      el.textContent=avail[~~(Math.random()*avail.length)].name;
-      playTick(); elapsed+=interval;
-      if(elapsed>dur*.68){clearInterval(roll);slowDown(winner,avail,el,res);}
-    },interval);
-  });
-}
-function slowDown(winner,avail,el,res){
-  let delay=120,step=0;
-  function nxt(){
-    if(step>=9){
-      el.className='slot-name'; el.textContent=winner.name; el.className='slot-name reveal';
-      flash(); playReveal(); setTimeout(()=>burst(),200); res(); return;
-    }
-    el.textContent=avail[~~(Math.random()*avail.length)].name;
-    playTick(); step++; delay+=45; setTimeout(nxt,delay);
-  }
-  nxt();
-}
-function animateMulti(picked,avail){
-  return new Promise(res=>{
-    const el=document.getElementById('slotEl');
-    const mg=document.getElementById('mgrid');
-    mg.style.display='grid'; mg.innerHTML='';
-    let idx=0;
-    function nxt(){
-      if(idx>=picked.length){res();return;}
-      const w=picked[idx];
-      el.className='slot-name rolling';
-      let elapsed=0,interval=80,dur=1600+idx*280;
-      const roll=setInterval(()=>{
-        el.textContent=avail[~~(Math.random()*avail.length)].name;
-        playTick(); elapsed+=interval;
-        if(elapsed>dur){
-          clearInterval(roll);
-          el.className='slot-name'; el.textContent=w.name; el.className='slot-name reveal';
-          flash(); playReveal();
-          const card=document.createElement('div');
-          card.className='mc'; card.style.setProperty('--d',(idx*.1)+'s');
-          card.innerHTML=`<div class="mc-name">${w.name}</div><div class="mc-n">#${idx+1}</div>`;
-          mg.appendChild(card); setTimeout(()=>burst(),100);
-          idx++; setTimeout(nxt,750);
-        }
-      },interval);
-    }
-    nxt();
-  });
+  isDrawing=false;
+  document.getElementById('dbtn').disabled=false;
+  document.getElementById('dbtn').textContent='抽　獎';
+  toast('✅ 抽獎完成！投影畫面已同步顯示');
 }
 function showRecent(pName){
   const card=document.getElementById('rwCard'),list=document.getElementById('rwList');
