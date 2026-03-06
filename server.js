@@ -32,6 +32,8 @@ let db = {
   ],
   winners: [],  // { name, email, prizeName, roundName, time }
   adminPin: '1234',
+  activeRound: -1,   // which round is shown on draw page
+  activePrize: -1,   // which prize is selected on draw page
 };
 
 // Load from file if it exists
@@ -46,6 +48,8 @@ function loadData() {
         delete db.prizes;
         saveData();
       }
+      if (db.activeRound === undefined) db.activeRound = -1;
+      if (db.activePrize === undefined) db.activePrize = -1;
       console.log('✅ 資料載入成功');
     }
   } catch (e) {
@@ -63,6 +67,14 @@ function saveData() {
 
 loadData();
 
+// ── SSE ──
+let sseClients = [];
+
+function broadcast(event, data) {
+  const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  sseClients.forEach(res => res.write(msg));
+}
+
 // ── Middleware ──
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -70,6 +82,28 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ══════════════════════════════════════
 //  API ROUTES
 // ══════════════════════════════════════
+
+// SSE endpoint
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  // Send current state immediately
+  res.write(`event: init\ndata: ${JSON.stringify({
+    activeRound: db.activeRound,
+    activePrize: db.activePrize,
+    rounds: db.rounds,
+    people: db.people,
+    winners: db.winners
+  })}\n\n`);
+
+  sseClients.push(res);
+  req.on('close', () => {
+    sseClients = sseClients.filter(c => c !== res);
+  });
+});
 
 // GET all data
 app.get('/api/data', (req, res) => {
@@ -86,6 +120,7 @@ app.post('/api/people', (req, res) => {
   const person = { name, email, won: false };
   db.people.push(person);
   saveData();
+  broadcast('refresh', { people: db.people, winners: db.winners });
   res.json({ ok: true, person, total: db.people.length });
 });
 
@@ -95,6 +130,7 @@ app.delete('/api/people/:index', (req, res) => {
   if (db.people[i].won) return res.status(400).json({ error: '已中獎者無法移除' });
   db.people.splice(i, 1);
   saveData();
+  broadcast('refresh', { people: db.people, winners: db.winners });
   res.json({ ok: true });
 });
 
@@ -108,6 +144,7 @@ app.post('/api/people/batch', (req, res) => {
     }
   });
   saveData();
+  broadcast('refresh', { people: db.people, winners: db.winners });
   res.json({ ok: true, added });
 });
 
@@ -115,7 +152,10 @@ app.delete('/api/people', (req, res) => {
   db.people = [];
   db.winners = [];
   db.rounds.forEach(r => r.prizes.forEach(p => p.done = false));
+  db.activeRound = -1;
+  db.activePrize = -1;
   saveData();
+  broadcast('refresh', { people: db.people, winners: db.winners, rounds: db.rounds, activeRound: -1, activePrize: -1 });
   res.json({ ok: true });
 });
 
@@ -124,6 +164,25 @@ app.put('/api/rounds', (req, res) => {
   const { rounds } = req.body;
   db.rounds = rounds;
   saveData();
+  broadcast('refresh', { rounds: db.rounds });
+  res.json({ ok: true });
+});
+
+// ── Active Round / Prize (admin controls what draw page shows) ──
+app.put('/api/active-round', (req, res) => {
+  const { roundIndex } = req.body;
+  db.activeRound = roundIndex;
+  db.activePrize = -1;
+  saveData();
+  broadcast('activeRound', { activeRound: roundIndex, activePrize: -1, rounds: db.rounds });
+  res.json({ ok: true });
+});
+
+app.put('/api/active-prize', (req, res) => {
+  const { prizeIndex } = req.body;
+  db.activePrize = prizeIndex;
+  saveData();
+  broadcast('activePrize', { activePrize: prizeIndex, activeRound: db.activeRound, rounds: db.rounds });
   res.json({ ok: true });
 });
 
@@ -159,6 +218,20 @@ app.post('/api/draw', (req, res) => {
   prize.done = true;
   saveData();
 
+  // Broadcast draw event to draw page (includes all names for animation)
+  broadcast('draw', {
+    winners: picked,
+    prize: prize.name,
+    round: round.name,
+    roundIndex,
+    prizeIndex,
+    allPeople: avail.map(p => p.name),
+    count,
+    allWinners: db.winners,
+    rounds: db.rounds,
+    people: db.people
+  });
+
   res.json({ ok: true, winners: picked, prize: prize.name, round: round.name });
 });
 
@@ -167,7 +240,10 @@ app.delete('/api/winners', (req, res) => {
   db.people.forEach(p => p.won = false);
   db.winners = [];
   db.rounds.forEach(r => r.prizes.forEach(p => p.done = false));
+  db.activeRound = -1;
+  db.activePrize = -1;
   saveData();
+  broadcast('refresh', { people: db.people, winners: db.winners, rounds: db.rounds, activeRound: -1, activePrize: -1 });
   res.json({ ok: true });
 });
 
@@ -206,11 +282,22 @@ app.get('/api/export', (req, res) => {
   res.send(rows.join('\n'));
 });
 
-// Catch-all: serve index.html
+// ── Page routes ──
+app.get('/draw', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'draw.html'));
+});
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// Catch-all: serve index.html (registration page)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
   console.log(`🎉 IM 行動教會春酒抽獎系統啟動：http://localhost:${PORT}`);
+  console.log(`   登記頁面: http://localhost:${PORT}`);
+  console.log(`   抽獎頁面: http://localhost:${PORT}/draw`);
+  console.log(`   管理後台: http://localhost:${PORT}/admin`);
 });

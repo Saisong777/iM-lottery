@@ -19,6 +19,7 @@ body {
   font-family: 'Noto Serif TC', serif;
   background: var(--bg); color: var(--text);
   min-height: 100vh; overflow-x: hidden;
+  display: flex; flex-direction: column; align-items: center;
 }
 body::before {
   content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
@@ -26,16 +27,11 @@ body::before {
     radial-gradient(ellipse 60% 50% at 10% 10%, rgba(192,57,43,.15), transparent),
     radial-gradient(ellipse 60% 50% at 90% 90%, rgba(184,134,11,.12), transparent);
 }
-.screen { display: none; min-height: 100vh; flex-direction: column; align-items: center; position: relative; z-index: 1; }
-.screen.active { display: flex; }
-.hdr { text-align: center; padding: 32px 20px 18px; width: 100%; }
+.hdr { text-align: center; padding: 32px 20px 18px; width: 100%; position: relative; z-index: 1; }
 .hdr-logo { font-family: 'Cinzel Decorative', serif; font-size: clamp(.9rem,2.8vw,1.5rem); color: var(--gold); letter-spacing: .18em; text-shadow: 0 0 28px rgba(255,215,0,.45); }
 .hdr-sub { font-size: .75rem; color: var(--gold-dim); letter-spacing: .32em; margin-top: 4px; }
 .hdr-line { width: 160px; height: 1px; background: linear-gradient(90deg,transparent,var(--gold-dim),transparent); margin: 10px auto 0; }
-
-/* ── REGISTRATION ── */
-#s-reg { justify-content: flex-start; }
-.reg-wrap { width: 100%; max-width: 500px; padding: 0 24px 80px; }
+.reg-wrap { width: 100%; max-width: 500px; padding: 0 24px 80px; position: relative; z-index: 1; }
 .reg-hero { text-align: center; margin-bottom: 26px; }
 .reg-emoji { font-size: 3.8rem; display: block; margin-bottom: 10px; }
 .reg-title { font-size: 1.65rem; font-weight: 900; color: var(--gold); }
@@ -52,8 +48,6 @@ body::before {
 .reg-submit:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 .reg-tally { text-align: center; margin-top: 16px; font-size: .8rem; color: #555; }
 .reg-tally b { color: var(--gold); }
-
-/* ── SUCCESS ── */
 .success-veil { position: fixed; inset: 0; z-index: 500; background: rgba(8,8,16,.92); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .3s; }
 .success-veil.on { opacity: 1; pointer-events: all; }
 .success-box { text-align: center; transform: scale(.7); transition: transform .4s cubic-bezier(.34,1.56,.64,1); }
@@ -61,139 +55,50 @@ body::before {
 .s-icon { font-size: 5rem; margin-bottom: 14px; display: block; }
 .s-name { font-size: 2.2rem; font-weight: 900; color: var(--gold); }
 .s-msg { color: #aaa; margin-top: 8px; font-size: .95rem; }
-
-/* ── ADMIN BTN ── */
 .unlock-btn { position: fixed; bottom: 18px; right: 18px; z-index: 100; background: rgba(16,16,26,.85); border: 1px solid rgba(184,134,11,.18); color: #444; padding: 7px 13px; border-radius: 8px; font-size: .72rem; cursor: pointer; font-family: 'Noto Serif TC', serif; transition: all .3s; }
 .unlock-btn:hover { color: var(--gold-dim); border-color: rgba(184,134,11,.45); }
-
-/* ── PIN ── */
 .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.78); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 600; }
 .modal-bg.open { display: flex; }
 .pin-box { background: var(--bg3); border: 1px solid rgba(184,134,11,.32); border-radius: 14px; padding: 32px 26px; width: 310px; text-align: center; animation: popIn .3s cubic-bezier(.34,1.56,.64,1); }
 @keyframes popIn { from{transform:scale(.75);opacity:0;}to{transform:scale(1);opacity:1;} }
 .pin-title { font-size: 1rem; color: var(--gold); letter-spacing: .1em; margin-bottom: 20px; }
-.pin-dots { display: flex; justify-content: center; gap: 13px; margin-bottom: 18px; }
-.dot { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--gold-dim); transition: background .2s; }
-.dot.lit { background: var(--gold); border-color: var(--gold); }
-.dot.bad { background: rgba(231,76,60,.4); border-color: var(--red-hi); }
 .pin-err { color: var(--red-hi); font-size: .78rem; min-height: 18px; margin-bottom: 10px; }
-.pin-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; margin-bottom: 14px; }
-.pk { padding: 13px; background: var(--bg2); border: 1px solid rgba(184,134,11,.18); color: var(--text); border-radius: 8px; font-size: 1.1rem; font-weight: 700; font-family: 'Noto Serif TC', serif; cursor: pointer; transition: all .14s; }
-.pk:hover { background: rgba(184,134,11,.18); border-color: var(--gold-dim); }
-.pk:active { transform: scale(.94); }
-.pk.sm { font-size: .82rem; color: #777; }
-.pin-cancel { background: none; border: none; color: #555; font-family: 'Noto Serif TC', serif; font-size: .82rem; cursor: pointer; }
-
-/* ── ADMIN ── */
-#s-admin { align-items: stretch; }
-.admin-nav { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 10px 16px; z-index: 1; }
-.nb { padding: 7px 16px; border: 1px solid var(--gold-dim); background: transparent; color: var(--gold-dim); font-family: 'Noto Serif TC', serif; font-size: .82rem; cursor: pointer; border-radius: 4px; transition: all .25s; letter-spacing: .04em; }
-.nb.on, .nb:hover { background: var(--gold-dim); color: var(--bg); font-weight: 700; }
-.nb.exit { border-color: rgba(192,57,43,.4); color: #844; }
-.nb.exit:hover { background: var(--red); color: white; border-color: var(--red); }
-.a-content { flex: 1; max-width: 900px; width: 100%; margin: 0 auto; padding: 0 16px 70px; z-index: 1; }
-.tab { display: none; } .tab.on { display: block; }
-.card { background: var(--bg3); border: 1px solid rgba(184,134,11,.22); border-radius: 9px; padding: 20px; margin-bottom: 14px; }
-.ct { font-size: .9rem; color: var(--gold); letter-spacing: .1em; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-.ct::before { content: ''; display: inline-block; width: 3px; height: 13px; background: var(--gold); border-radius: 2px; flex-shrink: 0; }
-input[type=text],input[type=email],input[type=number],textarea { background: var(--bg2); border: 1px solid rgba(184,134,11,.28); color: var(--text); padding: 8px 12px; border-radius: 4px; font-family: 'Noto Serif TC', serif; font-size: .85rem; width: 100%; outline: none; transition: border-color .25s; }
-input:focus,textarea:focus { border-color: var(--gold); }
-textarea { resize: vertical; min-height: 100px; }
-.row { display: flex; gap: 9px; margin-bottom: 9px; }
-.row input { flex: 1; }
 .btn { padding: 8px 16px; border: none; border-radius: 4px; font-family: 'Noto Serif TC', serif; font-size: .82rem; cursor: pointer; transition: all .2s; letter-spacing: .04em; }
 .btn-g { background: linear-gradient(135deg,var(--gold-dim),var(--gold)); color: var(--bg); font-weight: 700; }
 .btn-g:hover { filter: brightness(1.15); transform: translateY(-1px); }
-.btn-r { background: var(--red); color: white; }
-.btn-r:hover { background: var(--red-hi); }
 .btn-o { background: transparent; border: 1px solid var(--gold-dim); color: var(--gold-dim); }
 .btn-o:hover { background: rgba(184,134,11,.15); }
-.btn-sm { padding: 4px 11px; font-size: .72rem; }
-.rtbl { width: 100%; border-collapse: collapse; font-size: .8rem; }
-.rtbl th { padding: 8px 11px; text-align: left; background: rgba(184,134,11,.1); color: var(--gold-dim); letter-spacing: .04em; border-bottom: 1px solid rgba(184,134,11,.18); }
-.rtbl td { padding: 7px 11px; border-bottom: 1px solid rgba(255,255,255,.04); color: #bbb; }
-.rtbl tr:hover td { background: rgba(255,255,255,.025); }
-.ok { color: var(--green); font-size: .7rem; } .won-lbl { color: var(--gold); font-size: .7rem; }
-.stats { display: flex; gap: 18px; margin-top: 10px; font-size: .78rem; color: var(--gold-dim); }
-.stats b { color: var(--gold); }
-.plist { display: flex; flex-direction: column; gap: 8px; }
-.pitem { display: flex; align-items: center; gap: 8px; background: var(--bg2); border: 1px solid rgba(184,134,11,.18); padding: 10px; border-radius: 6px; }
-.pnum { width: 25px; height: 25px; background: var(--gold-dim); color: var(--bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .78rem; flex-shrink: 0; }
-.pitem input { flex: 1; }
-.pcnt { width: 52px !important; text-align: center; }
-.dp { text-align: center; }
-.psel { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
-.psb { padding: 8px 15px; border: 1px solid rgba(184,134,11,.38); background: var(--bg3); color: var(--text); font-family: 'Noto Serif TC', serif; font-size: .85rem; cursor: pointer; border-radius: 6px; transition: all .25s; }
-.psb.sel { background: linear-gradient(135deg,var(--gold-dim),var(--gold)); color: var(--bg); font-weight: 700; border-color: transparent; }
-.psb.done { opacity: .38; cursor: not-allowed; }
-.pbadge { display: inline-block; padding: 6px 22px; background: linear-gradient(135deg,var(--red),#700); border: 1px solid rgba(255,120,120,.25); border-radius: 30px; font-size: 1rem; font-weight: 700; letter-spacing: .1em; margin-bottom: 12px; color: #FFE; }
-.slot-wrap { position: relative; margin: 14px auto; max-width: 560px; }
-.slot-frame { background: linear-gradient(180deg,var(--bg2),rgba(16,16,26,.4)); border: 2px solid var(--gold-dim); border-radius: 12px; padding: 26px 20px; min-height: 135px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-.slot-frame::before,.slot-frame::after { content: ''; position: absolute; left: 0; right: 0; height: 52px; z-index: 2; pointer-events: none; }
-.slot-frame::before { top: 0; background: linear-gradient(to bottom,var(--bg2),transparent); }
-.slot-frame::after { bottom: 0; background: linear-gradient(to top,var(--bg2),transparent); }
-.slot-name { font-size: clamp(2rem,9vw,4.5rem); font-weight: 900; color: var(--gold); letter-spacing: .1em; position: relative; z-index: 3; text-shadow: 0 0 40px rgba(255,215,0,.65),0 0 80px rgba(255,215,0,.3); }
-.slot-name.rolling { animation: roll .08s steps(1) infinite; }
-.slot-name.reveal { animation: revPop .6s cubic-bezier(.34,1.56,.64,1) forwards; }
-@keyframes roll { 0%{transform:translateY(-4px) scale(1.03);opacity:.75;}50%{transform:translateY(4px) scale(.97);opacity:1;} }
-@keyframes revPop { 0%{transform:scale(.4);opacity:0;color:white;}60%{transform:scale(1.18);}80%{transform:scale(.96);}100%{transform:scale(1);opacity:1;color:var(--gold);} }
-.cdov { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 10; background: rgba(8,8,16,.88); border-radius: 10px; }
-.cdn { font-size: 8.5rem; font-weight: 900; color: var(--gold); text-shadow: 0 0 60px rgba(255,215,0,.8); animation: cdp 1s ease-out forwards; }
-@keyframes cdp { 0%{transform:scale(1.6);opacity:0;}40%{opacity:1;transform:scale(1);}80%{opacity:1;}100%{opacity:0;transform:scale(.4);} }
-.dbtn { display: block; margin: 16px auto 0; padding: 14px 46px; font-size: 1.1rem; font-weight: 900; letter-spacing: .22em; background: linear-gradient(135deg,#7B0000,var(--red-hi)); color: #FFF5CC; border: none; border-radius: 50px; cursor: pointer; font-family: 'Noto Serif TC', serif; box-shadow: 0 4px 22px rgba(231,76,60,.42),0 0 0 2px rgba(255,215,0,.18); transition: all .2s; position: relative; overflow: hidden; }
-.dbtn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg,rgba(255,255,255,.08),transparent); border-radius: inherit; }
-.dbtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(231,76,60,.62),0 0 0 2px rgba(255,215,0,.36); }
-.dbtn:disabled { opacity: .45; cursor: not-allowed; }
-.wi { display: flex; align-items: center; gap: 10px; padding: 8px 13px; background: linear-gradient(90deg,rgba(192,57,43,.14),transparent); border-left: 3px solid var(--red); margin-bottom: 7px; border-radius: 0 6px 6px 0; animation: slideIn .38s ease forwards; }
-@keyframes slideIn { from{opacity:0;transform:translateX(-18px);}to{opacity:1;transform:translateX(0);} }
-.wi-rank { font-size: .7rem; color: var(--gold-dim); min-width: 50px; }
-.wi-name { font-size: 1rem; font-weight: 700; color: var(--gold); }
-.wi-email { font-size: .68rem; color: #555; margin-left: 3px; }
-.wi-prize { font-size: .68rem; background: rgba(184,134,11,.18); border: 1px solid var(--gold-dim); padding: 2px 8px; border-radius: 10px; color: var(--gold-dim); margin-left: auto; white-space: nowrap; }
-.mgrid { display: grid; grid-template-columns: repeat(auto-fill,minmax(105px,1fr)); gap: 10px; margin: 12px 0; }
-.mc { background: linear-gradient(135deg,rgba(192,57,43,.2),rgba(184,134,11,.1)); border: 1px solid rgba(255,215,0,.28); border-radius: 8px; padding: 10px; text-align: center; animation: popIn .4s cubic-bezier(.34,1.56,.64,1) forwards; animation-delay: var(--d); opacity: 0; }
-.mc-name { font-size: .9rem; font-weight: 700; color: var(--gold); }
-.mc-n { font-size: .65rem; color: #777; margin-top: 3px; }
-.htitle { font-size: .78rem; color: var(--gold-dim); letter-spacing: .1em; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid rgba(184,134,11,.18); }
-.empty { text-align: center; padding: 28px; color: #444; font-size: .85rem; }
-#cc { position: fixed; inset: 0; pointer-events: none; z-index: 900; }
-#fl { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 890; transition: opacity .1s; }
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--bg3); border: 1px solid rgba(184,134,11,.3); color: var(--text); padding: 10px 22px; border-radius: 30px; font-size: .85rem; z-index: 800; transition: transform .3s, opacity .3s; opacity: 0; }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+#cc { position: fixed; inset: 0; pointer-events: none; z-index: 900; }
 </style>
 </head>
 <body>
 
 <canvas id="cc"></canvas>
-<div id="fl"></div>
 <div class="toast" id="toast"></div>
 
-<!-- ════ SCREEN: REGISTRATION ════ -->
-<div class="screen active" id="s-reg">
-  <div class="hdr">
-    <div class="hdr-logo">IM 行動教會</div>
-    <div class="hdr-sub">Spring Banquet · 春酒晚宴</div>
-    <div class="hdr-line"></div>
+<div class="hdr">
+  <div class="hdr-logo">IM 行動教會</div>
+  <div class="hdr-sub">Spring Banquet · 春酒晚宴</div>
+  <div class="hdr-line"></div>
+</div>
+<div class="reg-wrap">
+  <div class="reg-hero">
+    <span class="reg-emoji">🎊</span>
+    <div class="reg-title">歡迎登記抽獎！</div>
+    <p class="reg-desc">請填寫您的姓名與 Email<br>完成登記後即可參加今晚的幸運抽獎 🎁</p>
   </div>
-  <div class="reg-wrap">
-    <div class="reg-hero">
-      <span class="reg-emoji">🎊</span>
-      <div class="reg-title">歡迎登記抽獎！</div>
-      <p class="reg-desc">請填寫您的姓名與 Email<br>完成登記後即可參加今晚的幸運抽獎 🎁</p>
-    </div>
-    <div class="reg-card">
-      <label class="f-label" for="rName">姓　名 <em>*</em></label>
-      <input class="f-input" type="text" id="rName" placeholder="請輸入您的姓名" autocomplete="off">
-      <label class="f-label" for="rEmail">電子郵件 <em>*</em></label>
-      <input class="f-input" type="email" id="rEmail" placeholder="example@gmail.com" autocomplete="off">
-      <button class="reg-submit" id="regBtn" onclick="doRegister()">確認登記，加入抽獎 🎉</button>
-    </div>
-    <div class="reg-tally">目前已有 <b id="regCnt">0</b> 位會友完成登記</div>
+  <div class="reg-card">
+    <label class="f-label" for="rName">姓　名 <em>*</em></label>
+    <input class="f-input" type="text" id="rName" placeholder="請輸入您的姓名" autocomplete="off">
+    <label class="f-label" for="rEmail">電子郵件 <em>*</em></label>
+    <input class="f-input" type="email" id="rEmail" placeholder="example@gmail.com" autocomplete="off">
+    <button class="reg-submit" id="regBtn" onclick="doRegister()">確認登記，加入抽獎 🎉</button>
   </div>
-  <button class="unlock-btn" onclick="openPin()">⚙ 管理員</button>
+  <div class="reg-tally">目前已有 <b id="regCnt">0</b> 位會友完成登記</div>
 </div>
 
-<!-- ════ SUCCESS OVERLAY ════ -->
 <div class="success-veil" id="sv">
   <div class="success-box">
     <span class="s-icon">🎉</span>
@@ -202,7 +107,6 @@ textarea { resize: vertical; min-height: 100px; }
   </div>
 </div>
 
-<!-- ════ LOGIN MODAL ════ -->
 <div class="modal-bg" id="pinModal">
   <div class="pin-box">
     <div class="pin-title">🔐 管理員驗證</div>
@@ -217,166 +121,23 @@ textarea { resize: vertical; min-height: 100px; }
   </div>
 </div>
 
-<!-- ════ SCREEN: ADMIN ════ -->
-<div class="screen" id="s-admin">
-  <div class="hdr">
-    <div class="hdr-logo">IM 行動教會 · 管理後台</div>
-    <div class="hdr-sub">Admin Panel · Spring Banquet Draw</div>
-    <div class="hdr-line"></div>
-  </div>
-  <div class="admin-nav">
-    <button class="nb on" onclick="atab('reg',this)">📋 登記名單</button>
-    <button class="nb" onclick="atab('prizes',this)">🎁 獎項設定</button>
-    <button class="nb" onclick="atab('draw',this)">🎉 開始抽獎</button>
-    <button class="nb" onclick="atab('hist',this)">🏆 得獎紀錄</button>
-    <button class="nb" onclick="atab('pw',this)">🔑 更改密碼</button>
-    <button class="nb exit" onclick="exitAdmin()">← 回登記頁面</button>
-  </div>
-  <div class="a-content">
-
-    <!-- 登記名單 -->
-    <div class="tab on" id="tab-reg">
-      <div class="card">
-        <div class="ct">手動新增參與者</div>
-        <div class="row">
-          <input type="text" id="aN" placeholder="姓名（必填）">
-          <input type="email" id="aE" placeholder="Email（選填）" style="flex:1.4">
-          <button class="btn btn-g" onclick="adminAdd()">新增</button>
-        </div>
-        <textarea id="batch" placeholder="批次新增（一行一人）&#10;格式：姓名  或  姓名,email&#10;&#10;王大明&#10;李小花,flower@gmail.com"></textarea>
-        <button class="btn btn-o btn-sm" style="margin-top:7px" onclick="doBatch()">批次匯入</button>
-      </div>
-      <div class="card">
-        <div class="ct">登記名單</div>
-        <div style="overflow-x:auto">
-          <table class="rtbl">
-            <thead><tr><th>#</th><th>姓名</th><th>Email</th><th>狀態</th><th>操作</th></tr></thead>
-            <tbody id="rtbody"><tr><td colspan="5" class="empty">尚無登記者</td></tr></tbody>
-          </table>
-        </div>
-        <div class="stats">
-          <div>總計：<b id="tC">0</b> 人</div>
-          <div>可抽：<b id="aC">0</b> 人</div>
-          <div>已中獎：<b id="wC">0</b> 人</div>
-        </div>
-        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-o btn-sm" onclick="loadSample()">載入範例名單</button>
-          <button class="btn btn-r btn-sm" onclick="clearAll()">清除全部</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 獎項設定 -->
-    <div class="tab" id="tab-prizes">
-      <div id="roundsList"></div>
-      <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap">
-        <button class="btn btn-g" onclick="addRound()">＋ 新增輪次</button>
-        <button class="btn btn-o" onclick="loadDefaultRounds()">載入預設</button>
-        <button class="btn btn-g" onclick="saveRounds()">💾 儲存設定</button>
-      </div>
-      <div class="card" style="font-size:.8rem;color:#666;line-height:1.95;margin-top:12px">
-        <b style="color:var(--gold-dim)">💡 提示：</b>
-        每輪可設定多個獎項。設定後請記得點「儲存設定」。抽獎時只會顯示當前選擇的輪次。
-      </div>
-    </div>
-
-    <!-- 開始抽獎 -->
-    <div class="tab dp" id="tab-draw">
-      <div class="card">
-        <div class="ct">選擇輪次</div>
-        <div class="psel" id="rsel"></div>
-      </div>
-      <div class="card" id="prizeSelCard" style="display:none">
-        <div class="ct">選擇獎項 — <span id="curRoundName" style="color:var(--gold)"></span></div>
-        <div class="psel" id="psel"></div>
-      </div>
-      <div id="drawArea" style="display:none">
-        <div class="card" style="text-align:center">
-          <div class="pbadge" id="curPrize">獎項</div>
-          <div style="font-size:.8rem;color:#777;margin-bottom:8px">本獎項抽出 <b id="prCnt" style="color:var(--gold)">1</b> 位</div>
-          <div class="slot-wrap">
-            <div class="slot-frame">
-              <div class="slot-name" id="slotEl">？</div>
-              <div class="cdov" id="cdov" style="display:none"><div class="cdn" id="cdnEl">3</div></div>
-            </div>
-          </div>
-          <button class="dbtn" id="dbtn" onclick="startDraw()">抽　獎</button>
-          <div class="mgrid" id="mgrid" style="display:none"></div>
-        </div>
-      </div>
-      <div class="card" id="rwCard" style="display:none">
-        <div class="ct">本次得獎者</div>
-        <div id="rwList"></div>
-      </div>
-    </div>
-
-    <!-- 得獎紀錄 -->
-    <div class="tab" id="tab-hist">
-      <div class="card">
-        <div class="ct">完整得獎紀錄</div>
-        <div id="histEl"><div class="empty">尚未進行抽獎</div></div>
-        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-o btn-sm" onclick="exportCSV()">📥 匯出 CSV</button>
-          <button class="btn btn-r btn-sm" onclick="resetDraw()">重置抽獎紀錄</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 更改密碼 -->
-    <div class="tab" id="tab-pw">
-      <div class="card" style="max-width:400px;margin:0 auto">
-        <div class="ct">更改管理員密碼</div>
-        <label class="f-label" style="margin-top:10px">舊密碼</label>
-        <input type="password" id="pwOld" placeholder="請輸入目前密碼" style="margin-bottom:12px">
-        <label class="f-label">新密碼（至少 4 碼）</label>
-        <input type="password" id="pwNew" placeholder="請輸入新密碼" style="margin-bottom:12px">
-        <label class="f-label">確認新密碼</label>
-        <input type="password" id="pwNew2" placeholder="再次輸入新密碼" style="margin-bottom:16px">
-        <button class="btn btn-g" onclick="changePw()" style="width:100%;padding:11px;font-size:.92rem">確認更改</button>
-        <div id="pwMsg" style="margin-top:10px;font-size:.82rem;min-height:20px;text-align:center"></div>
-      </div>
-    </div>
-
-  </div>
-</div>
+<button class="unlock-btn" onclick="openPin()">⚙ 管理員</button>
 
 <script>
-/* ══ STATE ══ */
-let db = { people:[], rounds:[], winners:[] };
-let isDrawing = false;
-let selRound = -1;
-let selPrize = -1;
-/* ══ TOAST ══ */
 function toast(msg, dur=2200) {
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), dur);
 }
 
-/* ══ API ══ */
 async function api(method, path, body) {
   const opts = { method, headers: {'Content-Type':'application/json'} };
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch('/api'+path, opts);
   return r.json();
 }
-async function reload() {
-  const data = await api('GET','/data');
-  db = data;
-  document.getElementById('regCnt').textContent = db.people.length;
-}
 
-/* ══ AUDIO ══ */
-const AC = window.AudioContext||window.webkitAudioContext;
-let ac=null;
-const aud=()=>{if(!ac)ac=new AC();return ac;};
-const tone=(f,d,t='sine',v=.08)=>{try{const c=aud(),o=c.createOscillator(),g=c.createGain();o.type=t;o.frequency.value=f;o.connect(g);g.connect(c.destination);g.gain.setValueAtTime(v,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d);o.start();o.stop(c.currentTime+d);}catch(e){}};
-const playTick=()=>tone(600+Math.random()*600,.05,'square',.04);
-const playBeep=n=>tone(n===1?900:440,.28);
-const playReveal=()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.45,'triangle',.12),i*100));
-const playSuccess=()=>[440,550,660].forEach((f,i)=>setTimeout(()=>tone(f,.35,'sine',.1),i*80));
-
-/* ══ CONFETTI ══ */
+/* ── CONFETTI ── */
 const cc=document.getElementById('cc'),cx=cc.getContext('2d');
 let bits=[],animOn=false;
 const resize=()=>{cc.width=innerWidth;cc.height=innerHeight;};
@@ -393,9 +154,15 @@ function animConf(){
   if(bits.length)requestAnimationFrame(animConf);
   else{animOn=false;cx.clearRect(0,0,cc.width,cc.height);}
 }
-const flash=()=>{const f=document.getElementById('fl');f.style.opacity='.55';setTimeout(()=>f.style.opacity='0',110);};
 
-/* ══ REGISTRATION ══ */
+/* ── AUDIO ── */
+const AC = window.AudioContext||window.webkitAudioContext;
+let ac=null;
+const aud=()=>{if(!ac)ac=new AC();return ac;};
+const tone=(f,d,t='sine',v=.08)=>{try{const c=aud(),o=c.createOscillator(),g=c.createGain();o.type=t;o.frequency.value=f;o.connect(g);g.connect(c.destination);g.gain.setValueAtTime(v,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d);o.start();o.stop(c.currentTime+d);}catch(e){}};
+const playSuccess=()=>[440,550,660].forEach((f,i)=>setTimeout(()=>tone(f,.35,'sine',.1),i*80));
+
+/* ── REGISTRATION ── */
 async function doRegister() {
   const nE=document.getElementById('rName'), eE=document.getElementById('rEmail');
   const n=nE.value.trim(), e=eE.value.trim();
@@ -419,7 +186,7 @@ async function doRegister() {
 document.getElementById('rName').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('rEmail').focus();});
 document.getElementById('rEmail').addEventListener('keydown',e=>{if(e.key==='Enter')doRegister();});
 
-/* ══ LOGIN ══ */
+/* ── LOGIN ── */
 function openPin(){
   document.getElementById('loginPw').value='';
   document.getElementById('pinErr').textContent='';
@@ -434,7 +201,7 @@ async function doLogin(){
   const pw=document.getElementById('loginPw').value;
   if(!pw){document.getElementById('pinErr').textContent='請輸入密碼';return;}
   const res=await api('POST','/login',{pin:pw});
-  if(res.ok){closePin();enterAdmin();}
+  if(res.ok){ window.location.href='/admin'; }
   else{
     document.getElementById('pinErr').textContent=res.error||'密碼錯誤';
     document.getElementById('loginPw').value='';
@@ -446,296 +213,11 @@ document.getElementById('loginPw').addEventListener('keydown',e=>{
   if(e.key==='Escape')closePin();
 });
 
-/* ══ CHANGE PASSWORD ══ */
-async function changePw(){
-  const o=document.getElementById('pwOld').value;
-  const n=document.getElementById('pwNew').value;
-  const n2=document.getElementById('pwNew2').value;
-  const msg=document.getElementById('pwMsg');
-  msg.style.color='var(--red-hi)';
-  if(!o||!n||!n2){msg.textContent='請填寫所有欄位';return;}
-  if(n.length<4){msg.textContent='新密碼至少 4 碼';return;}
-  if(n!==n2){msg.textContent='兩次新密碼不一致';return;}
-  const res=await api('PUT','/admin-pin',{oldPin:o,newPin:n});
-  if(res.ok){
-    msg.style.color='var(--green)';msg.textContent='密碼已更新！';
-    document.getElementById('pwOld').value='';
-    document.getElementById('pwNew').value='';
-    document.getElementById('pwNew2').value='';
-    toast('密碼更改成功');
-  } else {
-    msg.textContent=res.error||'更改失敗';
-  }
-}
-
-/* ══ ADMIN ══ */
-async function enterAdmin(){
-  await reload();
-  document.getElementById('s-reg').classList.remove('active');
-  document.getElementById('s-admin').classList.add('active');
-  renderTable(); renderRounds(); renderPsel(); renderHist();
-}
-function exitAdmin(){
-  document.getElementById('s-admin').classList.remove('active');
-  document.getElementById('s-reg').classList.add('active');
-  document.getElementById('regCnt').textContent=db.people.length;
-  document.getElementById('rName').focus();
-}
-function atab(name,btn){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
-  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
-  document.getElementById('tab-'+name).classList.add('on'); btn.classList.add('on');
-  if(name==='draw'){reload().then(()=>{renderPsel();});}
-  if(name==='hist'){reload().then(()=>{renderHist();});}
-  if(name==='reg'){reload().then(()=>{renderTable();});}
-}
-
-/* ── People ── */
-async function adminAdd(){
-  const n=document.getElementById('aN').value.trim(), e=document.getElementById('aE').value.trim();
-  if(!n){toast('請輸入姓名');return;}
-  const res=await api('POST','/people',{name:n,email:e});
-  if(res.error){toast('⚠️ '+res.error);return;}
-  document.getElementById('aN').value=''; document.getElementById('aE').value='';
-  db.people.push(res.person); renderTable(); toast('✅ 已新增 '+n);
-}
-async function doBatch(){
-  const txt=document.getElementById('batch').value.trim();
-  if(!txt)return;
-  const lines=txt.split('\n').map(l=>{const p=l.trim().split(',');return{name:p[0]?.trim(),email:p[1]?.trim()||''};}).filter(x=>x.name);
-  const res=await api('POST','/people/batch',{lines});
-  document.getElementById('batch').value='';
-  await reload(); renderTable(); toast(`✅ 成功新增 ${res.added} 人`);
-}
-async function removePerson(i){
-  await api('DELETE','/people/'+i);
-  await reload(); renderTable();
-}
-async function loadSample(){
-  const lines=[['王大明','wang@church.org'],['李小花','li@gmail.com'],['陳志偉','chen@gmail.com'],['林美珍','lin@gmail.com'],['張建宏','chang@gmail.com'],['吳淑惠','wu@gmail.com'],['劉家豪','liu@gmail.com'],['黃雅婷','huang@gmail.com'],['蔡俊傑','tsai@gmail.com'],['許文婷','hsu@gmail.com'],['謝宗翰','hsieh@gmail.com'],['楊雅雯','yang@gmail.com']].map(([name,email])=>({name,email}));
-  const res=await api('POST','/people/batch',{lines});
-  await reload(); renderTable(); toast(`✅ 範例名單已載入（新增 ${res.added} 人）`);
-}
-async function clearAll(){
-  if(!confirm('確定清除所有人員與抽獎紀錄？'))return;
-  await api('DELETE','/people');
-  selRound=-1; selPrize=-1;
-  await reload(); renderTable(); renderHist(); renderPsel();
-  document.getElementById('drawArea').style.display='none';
-  document.getElementById('rwCard').style.display='none';
-  document.getElementById('prizeSelCard').style.display='none';
-}
-function renderTable(){
-  const tb=document.getElementById('rtbody');
-  if(!db.people.length){tb.innerHTML='<tr><td colspan="5" class="empty">尚無登記者</td></tr>';}
-  else{tb.innerHTML=db.people.map((p,i)=>`<tr><td>${i+1}</td><td>${p.name}</td><td style="color:#666">${p.email||'—'}</td><td>${p.won?'<span class="won-lbl">🏆 已中獎</span>':'<span class="ok">✓ 可抽</span>'}</td><td>${p.won?'—':`<button class="btn btn-r btn-sm" onclick="removePerson(${i})">移除</button>`}</td></tr>`).join('');}
-  const tot=db.people.length, w=db.people.filter(p=>p.won).length;
-  document.getElementById('tC').textContent=tot;
-  document.getElementById('aC').textContent=tot-w;
-  document.getElementById('wC').textContent=w;
-}
-
-/* ── Rounds / Prizes ── */
-function addRound(){db.rounds.push({name:'第'+(db.rounds.length+1)+'輪',prizes:[]});renderRounds();}
-function delRound(ri){if(!confirm('確定刪除「'+db.rounds[ri].name+'」？'))return;db.rounds.splice(ri,1);renderRounds();}
-function addPrizeToRound(ri){db.rounds[ri].prizes.push({name:'',count:1,done:false});renderRounds();}
-function delPrize(ri,pi){db.rounds[ri].prizes.splice(pi,1);renderRounds();}
-function loadDefaultRounds(){
-  db.rounds=[
-    {name:'第一輪',prizes:[{name:'安慰獎',count:5,done:false}]},
-    {name:'第二輪',prizes:[{name:'三獎',count:3,done:false},{name:'二獎',count:2,done:false}]},
-    {name:'第三輪',prizes:[{name:'頭獎 🏆',count:1,done:false}]}
-  ];renderRounds();
-}
-async function saveRounds(){
-  await api('PUT','/rounds',{rounds:db.rounds});
-  toast('✅ 設定已儲存');
-}
-function renderRounds(){
-  const el=document.getElementById('roundsList');
-  if(!db.rounds.length){el.innerHTML='<div class="card"><div class="empty">尚未設定輪次</div></div>';return;}
-  el.innerHTML=db.rounds.map((r,ri)=>`<div class="card" style="margin-bottom:10px">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <div class="pnum">${ri+1}</div>
-      <input type="text" value="${r.name}" placeholder="輪次名稱" oninput="db.rounds[${ri}].name=this.value" style="flex:1;font-weight:700">
-      <button class="btn btn-r btn-sm" onclick="delRound(${ri})">刪除輪次</button>
-    </div>
-    <div class="plist">${r.prizes.length?r.prizes.map((p,pi)=>`<div class="pitem">
-      <div class="pnum" style="width:20px;height:20px;font-size:.65rem">${pi+1}</div>
-      <input type="text" value="${p.name}" placeholder="獎項名稱" oninput="db.rounds[${ri}].prizes[${pi}].name=this.value">
-      <input type="number" class="pcnt" value="${p.count}" min="1" max="99" oninput="db.rounds[${ri}].prizes[${pi}].count=parseInt(this.value)||1" title="抽出人數">
-      <span style="font-size:.7rem;color:#555">人</span>
-      <button class="btn btn-r btn-sm" onclick="delPrize(${ri},${pi})">刪除</button>
-    </div>`).join(''):'<div class="empty" style="padding:6px;font-size:.78rem">此輪尚無獎項</div>'}</div>
-    <button class="btn btn-o btn-sm" style="margin-top:6px" onclick="addPrizeToRound(${ri})">＋ 新增獎項</button>
-  </div>`).join('');
-}
-
-/* ── Draw ── */
-function renderRsel(){
-  const rs=document.getElementById('rsel');
-  if(!db.rounds.length){rs.innerHTML='<div class="empty" style="padding:8px">請先設定並儲存輪次</div>';return;}
-  rs.innerHTML=db.rounds.map((r,i)=>{
-    const allDone=r.prizes.length&&r.prizes.every(p=>p.done);
-    return `<button class="psb ${allDone?'done':''} ${selRound===i?'sel':''}" onclick="${allDone?'':'selectRound('+i+')'}" ${allDone?'disabled':''}>${r.name||'輪次'+(i+1)}${allDone?' ✓':''}</button>`;
-  }).join('');
-}
-function renderPsel(){
-  renderRsel();
-  const ps=document.getElementById('psel');
-  const pc=document.getElementById('prizeSelCard');
-  if(selRound<0||!db.rounds[selRound]){pc.style.display='none';return;}
-  pc.style.display='block';
-  const r=db.rounds[selRound];
-  document.getElementById('curRoundName').textContent=r.name;
-  if(!r.prizes.length){ps.innerHTML='<div class="empty" style="padding:8px">此輪無獎項</div>';return;}
-  ps.innerHTML=r.prizes.map((p,i)=>`<button class="psb ${p.done?'done':''} ${selPrize===i?'sel':''}" onclick="${p.done?'':'selectPrize('+i+')'}" ${p.done?'disabled':''}>${p.name||'獎項'+(i+1)}${p.done?' ✓':''}</button>`).join('');
-}
-function selectRound(i){
-  selRound=i; selPrize=-1;
-  document.getElementById('drawArea').style.display='none';
-  document.getElementById('rwCard').style.display='none';
-  renderPsel();
-}
-function selectPrize(i){
-  selPrize=i; renderPsel();
-  const p=db.rounds[selRound].prizes[i];
-  document.getElementById('curPrize').textContent=p.name||'獎項'+(i+1);
-  document.getElementById('prCnt').textContent=p.count;
-  document.getElementById('drawArea').style.display='block';
-  document.getElementById('slotEl').textContent='？';
-  document.getElementById('slotEl').className='slot-name';
-  document.getElementById('mgrid').style.display='none';
-  document.getElementById('mgrid').innerHTML='';
-  document.getElementById('dbtn').disabled=false;
-  document.getElementById('rwCard').style.display='none';
-}
-
-async function startDraw(){
-  if(isDrawing)return;
-  const avail=db.people.filter(p=>!p.won);
-  if(!avail.length){toast('沒有可抽的參與者！');return;}
-  isDrawing=true; document.getElementById('dbtn').disabled=true;
-
-  const res=await api('POST','/draw',{roundIndex:selRound,prizeIndex:selPrize});
-  if(res.error){toast('⚠️ '+res.error);isDrawing=false;document.getElementById('dbtn').disabled=false;return;}
-
-  const picked=res.winners;
-  const prizeName=res.prize;
-
-  await countdown(3);
-  if(picked.length===1) await animateSingle(picked[0],avail);
-  else await animateMulti(picked,avail);
-
-  await reload(); renderTable();
-  db.rounds[selRound].prizes[selPrize].done=true;
-  renderPsel(); showRecent(prizeName); renderHist();
-  isDrawing=false; document.getElementById('dbtn').disabled=false;
-}
-
-function countdown(n){
-  return new Promise(res=>{
-    const ov=document.getElementById('cdov'),el=document.getElementById('cdnEl');
-    ov.style.display='flex'; let cur=n;
-    function tick(){
-      el.textContent=cur; el.style.animation='none'; el.offsetHeight;
-      el.style.animation='cdp 1s ease-out forwards'; playBeep(cur);
-      if(cur>1){cur--;setTimeout(tick,1000);}
-      else setTimeout(()=>{ov.style.display='none';res();},900);
-    }
-    tick();
-  });
-}
-function animateSingle(winner,avail){
-  return new Promise(res=>{
-    const el=document.getElementById('slotEl');
-    el.className='slot-name rolling';
-    let elapsed=0,interval=80,dur=2600;
-    const roll=setInterval(()=>{
-      el.textContent=avail[~~(Math.random()*avail.length)].name;
-      playTick(); elapsed+=interval;
-      if(elapsed>dur*.68){clearInterval(roll);slowDown(winner,avail,el,res);}
-    },interval);
-  });
-}
-function slowDown(winner,avail,el,res){
-  let delay=120,step=0;
-  function nxt(){
-    if(step>=9){
-      el.className='slot-name'; el.textContent=winner.name; el.className='slot-name reveal';
-      flash(); playReveal(); setTimeout(()=>burst(),200); res(); return;
-    }
-    el.textContent=avail[~~(Math.random()*avail.length)].name;
-    playTick(); step++; delay+=45; setTimeout(nxt,delay);
-  }
-  nxt();
-}
-function animateMulti(picked,avail){
-  return new Promise(res=>{
-    const el=document.getElementById('slotEl');
-    const mg=document.getElementById('mgrid');
-    mg.style.display='grid'; mg.innerHTML='';
-    let idx=0;
-    function nxt(){
-      if(idx>=picked.length){res();return;}
-      const w=picked[idx];
-      el.className='slot-name rolling';
-      let elapsed=0,interval=80,dur=1600+idx*280;
-      const roll=setInterval(()=>{
-        el.textContent=avail[~~(Math.random()*avail.length)].name;
-        playTick(); elapsed+=interval;
-        if(elapsed>dur){
-          clearInterval(roll);
-          el.className='slot-name'; el.textContent=w.name; el.className='slot-name reveal';
-          flash(); playReveal();
-          const card=document.createElement('div');
-          card.className='mc'; card.style.setProperty('--d',(idx*.1)+'s');
-          card.innerHTML=`<div class="mc-name">${w.name}</div><div class="mc-n">#${idx+1}</div>`;
-          mg.appendChild(card); setTimeout(()=>burst(),100);
-          idx++; setTimeout(nxt,750);
-        }
-      },interval);
-    }
-    nxt();
-  });
-}
-function showRecent(pName){
-  const card=document.getElementById('rwCard'),list=document.getElementById('rwList');
-  card.style.display='block';
-  list.innerHTML=db.winners.filter(w=>w.prizeName===pName).map((w,i)=>`<div class="wi"><span class="wi-rank">第 ${i+1} 位</span><span class="wi-name">🏆 ${w.name}</span><span class="wi-email">${w.email}</span><span class="wi-prize">${w.prizeName}</span></div>`).join('');
-}
-
-/* ── History ── */
-function renderHist(){
-  const h=document.getElementById('histEl');
-  if(!db.winners.length){h.innerHTML='<div class="empty">尚未進行抽獎</div>';return;}
-  // Group by round then prize
-  const rgrp={};
-  db.winners.forEach(w=>{
-    const rn=w.roundName||'';
-    if(!rgrp[rn])rgrp[rn]={};
-    if(!rgrp[rn][w.prizeName])rgrp[rn][w.prizeName]=[];
-    rgrp[rn][w.prizeName].push(w);
-  });
-  h.innerHTML=Object.entries(rgrp).map(([rn,prizes])=>`<div style="margin-bottom:20px">${rn?`<div style="font-size:.88rem;font-weight:700;color:var(--gold);margin-bottom:8px;letter-spacing:.08em">📌 ${rn}</div>`:''
-  }${Object.entries(prizes).map(([pn,ws])=>`<div style="margin-bottom:12px;margin-left:${rn?'12px':'0'}"><div class="htitle">🎁 ${pn}</div>${ws.map((w,i)=>`<div class="wi"><span class="wi-rank">第 ${i+1} 位 · ${w.time}</span><span class="wi-name">🏆 ${w.name}</span><span class="wi-email">${w.email}</span><span class="wi-prize">${w.prizeName}</span></div>`).join('')}</div>`).join('')}</div>`).join('');
-}
-async function resetDraw(){
-  if(!confirm('確定重置抽獎紀錄？（登記名單保留）'))return;
-  await api('DELETE','/winners');
-  selRound=-1; selPrize=-1;
-  await reload(); renderTable(); renderHist(); renderPsel();
-  document.getElementById('drawArea').style.display='none';
-  document.getElementById('rwCard').style.display='none';
-  document.getElementById('prizeSelCard').style.display='none';
-  toast('✅ 已重置抽獎紀錄');
-}
-function exportCSV(){
-  window.location.href='/api/export';
-}
-
 /* ── INIT ── */
-reload();
+(async()=>{
+  const data=await api('GET','/data');
+  document.getElementById('regCnt').textContent=data.people.length;
+})();
 </script>
 </body>
 </html>
