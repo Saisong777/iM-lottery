@@ -1,0 +1,173 @@
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const DATA_FILE = path.join(__dirname, 'data.json');
+
+// ── In-memory store (backed by data.json for persistence) ──
+let db = {
+  people: [],   // { name, email, won }
+  prizes: [
+    { name: '安慰獎', count: 5, done: false },
+    { name: '三獎',   count: 3, done: false },
+    { name: '二獎',   count: 2, done: false },
+    { name: '頭獎 🏆',count: 1, done: false },
+  ],
+  winners: [],  // { name, email, prizeName, time }
+};
+
+// Load from file if it exists
+function loadData() {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+      db = JSON.parse(raw);
+      console.log('✅ 資料載入成功');
+    }
+  } catch (e) {
+    console.error('⚠️  資料載入失敗，使用預設值', e.message);
+  }
+}
+
+function saveData() {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('⚠️  資料儲存失敗', e.message);
+  }
+}
+
+loadData();
+
+// ── Middleware ──
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ══════════════════════════════════════
+//  API ROUTES
+// ══════════════════════════════════════
+
+// GET all data
+app.get('/api/data', (req, res) => {
+  res.json(db);
+});
+
+// ── People ──
+app.post('/api/people', (req, res) => {
+  const { name, email } = req.body;
+  if (!name || !email) return res.status(400).json({ error: '姓名與 Email 為必填' });
+  if (db.people.find(p => p.email === email)) {
+    return res.status(409).json({ error: '此 Email 已登記' });
+  }
+  const person = { name, email, won: false };
+  db.people.push(person);
+  saveData();
+  res.json({ ok: true, person, total: db.people.length });
+});
+
+app.delete('/api/people/:index', (req, res) => {
+  const i = parseInt(req.params.index);
+  if (i < 0 || i >= db.people.length) return res.status(404).json({ error: '找不到此人' });
+  if (db.people[i].won) return res.status(400).json({ error: '已中獎者無法移除' });
+  db.people.splice(i, 1);
+  saveData();
+  res.json({ ok: true });
+});
+
+app.post('/api/people/batch', (req, res) => {
+  const { lines } = req.body; // array of {name, email}
+  let added = 0;
+  lines.forEach(({ name, email }) => {
+    if (name && !db.people.find(p => p.name === name)) {
+      db.people.push({ name, email: email || '', won: false });
+      added++;
+    }
+  });
+  saveData();
+  res.json({ ok: true, added });
+});
+
+app.delete('/api/people', (req, res) => {
+  db.people = [];
+  db.winners = [];
+  db.prizes.forEach(p => p.done = false);
+  saveData();
+  res.json({ ok: true });
+});
+
+// ── Prizes ──
+app.put('/api/prizes', (req, res) => {
+  const { prizes } = req.body;
+  db.prizes = prizes;
+  saveData();
+  res.json({ ok: true });
+});
+
+// ── Draw ──
+app.post('/api/draw', (req, res) => {
+  const { prizeIndex } = req.body;
+  const prize = db.prizes[prizeIndex];
+  if (!prize) return res.status(400).json({ error: '獎項不存在' });
+  if (prize.done) return res.status(400).json({ error: '此獎項已抽完' });
+
+  const avail = db.people.filter(p => !p.won);
+  if (!avail.length) return res.status(400).json({ error: '沒有可抽的參與者' });
+
+  const count = Math.min(prize.count, avail.length);
+
+  // Fisher-Yates shuffle
+  const pool = [...avail];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const picked = pool.slice(0, count);
+
+  // Mark as won
+  const time = new Date().toLocaleTimeString('zh-TW');
+  picked.forEach(p => {
+    const person = db.people.find(x => x.email === p.email);
+    if (person) person.won = true;
+    db.winners.push({ name: p.name, email: p.email, prizeName: prize.name, time });
+  });
+  prize.done = true;
+  saveData();
+
+  res.json({ ok: true, winners: picked, prize: prize.name });
+});
+
+// ── Winners ──
+app.delete('/api/winners', (req, res) => {
+  db.people.forEach(p => p.won = false);
+  db.winners = [];
+  db.prizes.forEach(p => p.done = false);
+  saveData();
+  res.json({ ok: true });
+});
+
+// ── Export ──
+app.get('/api/export', (req, res) => {
+  const rows = ['\uFEFF名次,姓名,Email,獎項,時間'];
+  const grp = {};
+  db.winners.forEach(w => {
+    if (!grp[w.prizeName]) grp[w.prizeName] = [];
+    grp[w.prizeName].push(w);
+  });
+  Object.values(grp).forEach(ws =>
+    ws.forEach((w, i) => rows.push(`${i+1},${w.name},${w.email},${w.prizeName},${w.time}`))
+  );
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="winners.csv"');
+  res.send(rows.join('\n'));
+});
+
+// Catch-all: serve index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.listen(PORT, () => {
+  console.log(`🎉 IM 行動教會春酒抽獎系統啟動：http://localhost:${PORT}`);
+});

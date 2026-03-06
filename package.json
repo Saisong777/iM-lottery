@@ -1,0 +1,12 @@
+{
+  "name": "im-church-lottery",
+  "version": "1.0.0",
+  "description": "IM 行動教會春酒抽獎系統",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
