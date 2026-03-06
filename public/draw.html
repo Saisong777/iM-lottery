@@ -188,6 +188,7 @@ body::before {
 let db = { people:[], rounds:[], winners:[], activeRound:-1, activePrize:-1 };
 let isAnimating = false;
 let isDrawing = false;
+let showingResults = false;
 let selPrize = -1;
 let evtSource = null;
 
@@ -282,27 +283,31 @@ function updateDrawView(){
   }
   pb.innerHTML=round.prizes.map((p,i)=>`<button class="psb ${p.done?'done':''} ${selPrize===i?'sel':''}" onclick="${p.done?'':'selectPrize('+i+')'}" ${p.done?'disabled':''}>${p.name||'獎項'+(i+1)}${p.done?' ✓':''}</button>`).join('');
 
-  // Show draw area if prize selected
-  if(selPrize>=0&&round.prizes[selPrize]&&!round.prizes[selPrize].done){
+  // Show draw area if prize selected or showing results
+  if(showingResults||isAnimating){
+    // Keep showing the draw area with results until next action
+    document.getElementById('drawArea').style.display='block';
+    document.getElementById('dbtn').style.display='none';
+  } else if(selPrize>=0&&round.prizes[selPrize]&&!round.prizes[selPrize].done){
     const prize=round.prizes[selPrize];
     document.getElementById('drawArea').style.display='block';
     document.getElementById('dPrizeName').textContent=prize.name;
     document.getElementById('dPrizeCount').innerHTML='本獎項抽出 <b style="color:var(--gold)">'+prize.count+'</b> 位';
-    if(!isAnimating){
-      document.getElementById('slotEl').textContent='？';
-      document.getElementById('slotEl').className='slot-name';
-      document.getElementById('mgrid').style.display='none';
-      document.getElementById('mgrid').innerHTML='';
-      document.getElementById('dbtn').disabled=false;
-      document.getElementById('dbtn').textContent='抽　獎';
-    }
-  } else if(!isAnimating) {
+    document.getElementById('slotEl').textContent='？';
+    document.getElementById('slotEl').className='slot-name';
+    document.getElementById('mgrid').style.display='none';
+    document.getElementById('mgrid').innerHTML='';
+    document.getElementById('dbtn').style.display='block';
+    document.getElementById('dbtn').disabled=false;
+    document.getElementById('dbtn').textContent='抽　獎';
+  } else {
     document.getElementById('drawArea').style.display='none';
   }
 }
 
 function selectPrize(i){
   selPrize=i;
+  showingResults=false;
   document.getElementById('recentWinners').innerHTML='';
   updateDrawView();
 }
@@ -414,7 +419,8 @@ async function startDraw(){
   db.activeRound=fresh.activeRound;
   renderPeopleGrid(); renderHist();
   isDrawing=false; isAnimating=false;
-  // Update prize buttons (mark done)
+  showingResults=true;
+  // Update prize buttons (mark done) but keep results visible
   updateDrawView();
 }
 
@@ -437,7 +443,7 @@ function connectSSE(){
     const d=JSON.parse(e.data);
     db.activeRound=d.activeRound;
     if(d.rounds) db.rounds=d.rounds;
-    selPrize=-1; // reset prize selection when round changes
+    selPrize=-1; showingResults=false; // reset when round changes
     updateDrawView();
   });
 
