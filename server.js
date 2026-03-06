@@ -9,13 +9,28 @@ const DATA_FILE = path.join(__dirname, 'data.json');
 // ── In-memory store (backed by data.json for persistence) ──
 let db = {
   people: [],   // { name, email, won }
-  prizes: [
-    { name: '安慰獎', count: 5, done: false },
-    { name: '三獎',   count: 3, done: false },
-    { name: '二獎',   count: 2, done: false },
-    { name: '頭獎 🏆',count: 1, done: false },
+  rounds: [
+    {
+      name: '第一輪',
+      prizes: [
+        { name: '安慰獎', count: 5, done: false },
+        { name: '三獎',   count: 3, done: false },
+      ],
+    },
+    {
+      name: '第二輪',
+      prizes: [
+        { name: '二獎', count: 2, done: false },
+      ],
+    },
+    {
+      name: '第三輪',
+      prizes: [
+        { name: '頭獎 🏆', count: 1, done: false },
+      ],
+    },
   ],
-  winners: [],  // { name, email, prizeName, time }
+  winners: [],  // { name, email, prizeName, roundName, time }
   adminPin: '1234',
 };
 
@@ -25,6 +40,12 @@ function loadData() {
     if (fs.existsSync(DATA_FILE)) {
       const raw = fs.readFileSync(DATA_FILE, 'utf-8');
       db = JSON.parse(raw);
+      // Backward compat: migrate old prizes[] to rounds[]
+      if (db.prizes && !db.rounds) {
+        db.rounds = [{ name: '第一輪', prizes: db.prizes }];
+        delete db.prizes;
+        saveData();
+      }
       console.log('✅ 資料載入成功');
     }
   } catch (e) {
@@ -93,23 +114,25 @@ app.post('/api/people/batch', (req, res) => {
 app.delete('/api/people', (req, res) => {
   db.people = [];
   db.winners = [];
-  db.prizes.forEach(p => p.done = false);
+  db.rounds.forEach(r => r.prizes.forEach(p => p.done = false));
   saveData();
   res.json({ ok: true });
 });
 
-// ── Prizes ──
-app.put('/api/prizes', (req, res) => {
-  const { prizes } = req.body;
-  db.prizes = prizes;
+// ── Rounds ──
+app.put('/api/rounds', (req, res) => {
+  const { rounds } = req.body;
+  db.rounds = rounds;
   saveData();
   res.json({ ok: true });
 });
 
 // ── Draw ──
 app.post('/api/draw', (req, res) => {
-  const { prizeIndex } = req.body;
-  const prize = db.prizes[prizeIndex];
+  const { roundIndex, prizeIndex } = req.body;
+  const round = db.rounds[roundIndex];
+  if (!round) return res.status(400).json({ error: '輪次不存在' });
+  const prize = round.prizes[prizeIndex];
   if (!prize) return res.status(400).json({ error: '獎項不存在' });
   if (prize.done) return res.status(400).json({ error: '此獎項已抽完' });
 
@@ -131,19 +154,19 @@ app.post('/api/draw', (req, res) => {
   picked.forEach(p => {
     const person = db.people.find(x => x.email === p.email);
     if (person) person.won = true;
-    db.winners.push({ name: p.name, email: p.email, prizeName: prize.name, time });
+    db.winners.push({ name: p.name, email: p.email, prizeName: prize.name, roundName: round.name, time });
   });
   prize.done = true;
   saveData();
 
-  res.json({ ok: true, winners: picked, prize: prize.name });
+  res.json({ ok: true, winners: picked, prize: prize.name, round: round.name });
 });
 
 // ── Winners ──
 app.delete('/api/winners', (req, res) => {
   db.people.forEach(p => p.won = false);
   db.winners = [];
-  db.prizes.forEach(p => p.done = false);
+  db.rounds.forEach(r => r.prizes.forEach(p => p.done = false));
   saveData();
   res.json({ ok: true });
 });
@@ -168,14 +191,15 @@ app.put('/api/admin-pin', (req, res) => {
 
 // ── Export ──
 app.get('/api/export', (req, res) => {
-  const rows = ['\uFEFF名次,姓名,Email,獎項,時間'];
+  const rows = ['\uFEFF名次,姓名,Email,輪次,獎項,時間'];
   const grp = {};
   db.winners.forEach(w => {
-    if (!grp[w.prizeName]) grp[w.prizeName] = [];
-    grp[w.prizeName].push(w);
+    const key = (w.roundName || '') + '|' + w.prizeName;
+    if (!grp[key]) grp[key] = [];
+    grp[key].push(w);
   });
   Object.values(grp).forEach(ws =>
-    ws.forEach((w, i) => rows.push(`${i+1},${w.name},${w.email},${w.prizeName},${w.time}`))
+    ws.forEach((w, i) => rows.push(`${i+1},${w.name},${w.email},${w.roundName||''},${w.prizeName},${w.time}`))
   );
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="winners.csv"');

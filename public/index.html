@@ -268,25 +268,26 @@ textarea { resize: vertical; min-height: 100px; }
 
     <!-- 獎項設定 -->
     <div class="tab" id="tab-prizes">
-      <div class="card">
-        <div class="ct">獎項設定</div>
-        <div class="plist" id="plist"></div>
-        <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap">
-          <button class="btn btn-g" onclick="addPrize()">＋ 新增獎項</button>
-          <button class="btn btn-o" onclick="loadDefaultPrizes()">載入預設</button>
-          <button class="btn btn-g" onclick="savePrizes()">💾 儲存獎項</button>
-        </div>
+      <div id="roundsList"></div>
+      <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn btn-g" onclick="addRound()">＋ 新增輪次</button>
+        <button class="btn btn-o" onclick="loadDefaultRounds()">載入預設</button>
+        <button class="btn btn-g" onclick="saveRounds()">💾 儲存設定</button>
       </div>
-      <div class="card" style="font-size:.8rem;color:#666;line-height:1.95">
+      <div class="card" style="font-size:.8rem;color:#666;line-height:1.95;margin-top:12px">
         <b style="color:var(--gold-dim)">💡 提示：</b>
-        獎項設定後請記得點「儲存獎項」。建議從小獎到大獎排列。
+        每輪可設定多個獎項。設定後請記得點「儲存設定」。抽獎時只會顯示當前選擇的輪次。
       </div>
     </div>
 
     <!-- 開始抽獎 -->
     <div class="tab dp" id="tab-draw">
       <div class="card">
-        <div class="ct">選擇本次獎項</div>
+        <div class="ct">選擇輪次</div>
+        <div class="psel" id="rsel"></div>
+      </div>
+      <div class="card" id="prizeSelCard" style="display:none">
+        <div class="ct">選擇獎項 — <span id="curRoundName" style="color:var(--gold)"></span></div>
         <div class="psel" id="psel"></div>
       </div>
       <div id="drawArea" style="display:none">
@@ -341,8 +342,9 @@ textarea { resize: vertical; min-height: 100px; }
 
 <script>
 /* ══ STATE ══ */
-let db = { people:[], prizes:[], winners:[] };
+let db = { people:[], rounds:[], winners:[] };
 let isDrawing = false;
+let selRound = -1;
 let selPrize = -1;
 /* ══ TOAST ══ */
 function toast(msg, dur=2200) {
@@ -471,7 +473,7 @@ async function enterAdmin(){
   await reload();
   document.getElementById('s-reg').classList.remove('active');
   document.getElementById('s-admin').classList.add('active');
-  renderTable(); renderPrizes(); renderPsel(); renderHist();
+  renderTable(); renderRounds(); renderPsel(); renderHist();
 }
 function exitAdmin(){
   document.getElementById('s-admin').classList.remove('active');
@@ -517,9 +519,11 @@ async function loadSample(){
 async function clearAll(){
   if(!confirm('確定清除所有人員與抽獎紀錄？'))return;
   await api('DELETE','/people');
+  selRound=-1; selPrize=-1;
   await reload(); renderTable(); renderHist(); renderPsel();
   document.getElementById('drawArea').style.display='none';
   document.getElementById('rwCard').style.display='none';
+  document.getElementById('prizeSelCard').style.display='none';
 }
 function renderTable(){
   const tb=document.getElementById('rtbody');
@@ -531,29 +535,71 @@ function renderTable(){
   document.getElementById('wC').textContent=w;
 }
 
-/* ── Prizes ── */
-function addPrize(){db.prizes.push({name:'',count:1,done:false});renderPrizes();}
-function delPrize(i){db.prizes.splice(i,1);renderPrizes();}
-function loadDefaultPrizes(){db.prizes=[{name:'安慰獎',count:5,done:false},{name:'三獎',count:3,done:false},{name:'二獎',count:2,done:false},{name:'頭獎 🏆',count:1,done:false}];renderPrizes();}
-async function savePrizes(){
-  await api('PUT','/prizes',{prizes:db.prizes});
-  toast('✅ 獎項已儲存');
+/* ── Rounds / Prizes ── */
+function addRound(){db.rounds.push({name:'第'+(db.rounds.length+1)+'輪',prizes:[]});renderRounds();}
+function delRound(ri){if(!confirm('確定刪除「'+db.rounds[ri].name+'」？'))return;db.rounds.splice(ri,1);renderRounds();}
+function addPrizeToRound(ri){db.rounds[ri].prizes.push({name:'',count:1,done:false});renderRounds();}
+function delPrize(ri,pi){db.rounds[ri].prizes.splice(pi,1);renderRounds();}
+function loadDefaultRounds(){
+  db.rounds=[
+    {name:'第一輪',prizes:[{name:'安慰獎',count:5,done:false}]},
+    {name:'第二輪',prizes:[{name:'三獎',count:3,done:false},{name:'二獎',count:2,done:false}]},
+    {name:'第三輪',prizes:[{name:'頭獎 🏆',count:1,done:false}]}
+  ];renderRounds();
 }
-function renderPrizes(){
-  const pl=document.getElementById('plist');
-  if(!db.prizes.length){pl.innerHTML='<div class="empty">尚未設定獎項</div>';return;}
-  pl.innerHTML=db.prizes.map((p,i)=>`<div class="pitem"><div class="pnum">${i+1}</div><input type="text" value="${p.name}" placeholder="獎項名稱" oninput="db.prizes[${i}].name=this.value"><input type="number" class="pcnt" value="${p.count}" min="1" max="99" oninput="db.prizes[${i}].count=parseInt(this.value)||1" title="抽出人數"><span style="font-size:.7rem;color:#555">人</span><button class="btn btn-r btn-sm" onclick="delPrize(${i})">刪除</button></div>`).join('');
+async function saveRounds(){
+  await api('PUT','/rounds',{rounds:db.rounds});
+  toast('✅ 設定已儲存');
+}
+function renderRounds(){
+  const el=document.getElementById('roundsList');
+  if(!db.rounds.length){el.innerHTML='<div class="card"><div class="empty">尚未設定輪次</div></div>';return;}
+  el.innerHTML=db.rounds.map((r,ri)=>`<div class="card" style="margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div class="pnum">${ri+1}</div>
+      <input type="text" value="${r.name}" placeholder="輪次名稱" oninput="db.rounds[${ri}].name=this.value" style="flex:1;font-weight:700">
+      <button class="btn btn-r btn-sm" onclick="delRound(${ri})">刪除輪次</button>
+    </div>
+    <div class="plist">${r.prizes.length?r.prizes.map((p,pi)=>`<div class="pitem">
+      <div class="pnum" style="width:20px;height:20px;font-size:.65rem">${pi+1}</div>
+      <input type="text" value="${p.name}" placeholder="獎項名稱" oninput="db.rounds[${ri}].prizes[${pi}].name=this.value">
+      <input type="number" class="pcnt" value="${p.count}" min="1" max="99" oninput="db.rounds[${ri}].prizes[${pi}].count=parseInt(this.value)||1" title="抽出人數">
+      <span style="font-size:.7rem;color:#555">人</span>
+      <button class="btn btn-r btn-sm" onclick="delPrize(${ri},${pi})">刪除</button>
+    </div>`).join(''):'<div class="empty" style="padding:6px;font-size:.78rem">此輪尚無獎項</div>'}</div>
+    <button class="btn btn-o btn-sm" style="margin-top:6px" onclick="addPrizeToRound(${ri})">＋ 新增獎項</button>
+  </div>`).join('');
 }
 
 /* ── Draw ── */
+function renderRsel(){
+  const rs=document.getElementById('rsel');
+  if(!db.rounds.length){rs.innerHTML='<div class="empty" style="padding:8px">請先設定並儲存輪次</div>';return;}
+  rs.innerHTML=db.rounds.map((r,i)=>{
+    const allDone=r.prizes.length&&r.prizes.every(p=>p.done);
+    return `<button class="psb ${allDone?'done':''} ${selRound===i?'sel':''}" onclick="${allDone?'':'selectRound('+i+')'}" ${allDone?'disabled':''}>${r.name||'輪次'+(i+1)}${allDone?' ✓':''}</button>`;
+  }).join('');
+}
 function renderPsel(){
+  renderRsel();
   const ps=document.getElementById('psel');
-  if(!db.prizes.length){ps.innerHTML='<div class="empty" style="padding:8px">請先設定並儲存獎項</div>';return;}
-  ps.innerHTML=db.prizes.map((p,i)=>`<button class="psb ${p.done?'done':''} ${selPrize===i?'sel':''}" onclick="${p.done?'':'selectPrize('+i+')'}" ${p.done?'disabled':''}>${p.name||'獎項'+(i+1)}${p.done?' ✓':''}</button>`).join('');
+  const pc=document.getElementById('prizeSelCard');
+  if(selRound<0||!db.rounds[selRound]){pc.style.display='none';return;}
+  pc.style.display='block';
+  const r=db.rounds[selRound];
+  document.getElementById('curRoundName').textContent=r.name;
+  if(!r.prizes.length){ps.innerHTML='<div class="empty" style="padding:8px">此輪無獎項</div>';return;}
+  ps.innerHTML=r.prizes.map((p,i)=>`<button class="psb ${p.done?'done':''} ${selPrize===i?'sel':''}" onclick="${p.done?'':'selectPrize('+i+')'}" ${p.done?'disabled':''}>${p.name||'獎項'+(i+1)}${p.done?' ✓':''}</button>`).join('');
+}
+function selectRound(i){
+  selRound=i; selPrize=-1;
+  document.getElementById('drawArea').style.display='none';
+  document.getElementById('rwCard').style.display='none';
+  renderPsel();
 }
 function selectPrize(i){
   selPrize=i; renderPsel();
-  const p=db.prizes[i];
+  const p=db.rounds[selRound].prizes[i];
   document.getElementById('curPrize').textContent=p.name||'獎項'+(i+1);
   document.getElementById('prCnt').textContent=p.count;
   document.getElementById('drawArea').style.display='block';
@@ -571,8 +617,7 @@ async function startDraw(){
   if(!avail.length){toast('沒有可抽的參與者！');return;}
   isDrawing=true; document.getElementById('dbtn').disabled=true;
 
-  // Call API to perform the draw
-  const res=await api('POST','/draw',{prizeIndex:selPrize});
+  const res=await api('POST','/draw',{roundIndex:selRound,prizeIndex:selPrize});
   if(res.error){toast('⚠️ '+res.error);isDrawing=false;document.getElementById('dbtn').disabled=false;return;}
 
   const picked=res.winners;
@@ -582,9 +627,8 @@ async function startDraw(){
   if(picked.length===1) await animateSingle(picked[0],avail);
   else await animateMulti(picked,avail);
 
-  // Reload fresh data
   await reload(); renderTable();
-  db.prizes[selPrize].done=true;
+  db.rounds[selRound].prizes[selPrize].done=true;
   renderPsel(); showRecent(prizeName); renderHist();
   isDrawing=false; document.getElementById('dbtn').disabled=false;
 }
@@ -665,17 +709,25 @@ function showRecent(pName){
 function renderHist(){
   const h=document.getElementById('histEl');
   if(!db.winners.length){h.innerHTML='<div class="empty">尚未進行抽獎</div>';return;}
-  const grp={};
-  db.winners.forEach(w=>{if(!grp[w.prizeName])grp[w.prizeName]=[];grp[w.prizeName].push(w);});
-  h.innerHTML=Object.entries(grp).map(([pn,ws])=>`<div style="margin-bottom:16px"><div class="htitle">🎁 ${pn}</div>${ws.map((w,i)=>`<div class="wi"><span class="wi-rank">第 ${i+1} 位 · ${w.time}</span><span class="wi-name">🏆 ${w.name}</span><span class="wi-email">${w.email}</span><span class="wi-prize">${w.prizeName}</span></div>`).join('')}</div>`).join('');
+  // Group by round then prize
+  const rgrp={};
+  db.winners.forEach(w=>{
+    const rn=w.roundName||'';
+    if(!rgrp[rn])rgrp[rn]={};
+    if(!rgrp[rn][w.prizeName])rgrp[rn][w.prizeName]=[];
+    rgrp[rn][w.prizeName].push(w);
+  });
+  h.innerHTML=Object.entries(rgrp).map(([rn,prizes])=>`<div style="margin-bottom:20px">${rn?`<div style="font-size:.88rem;font-weight:700;color:var(--gold);margin-bottom:8px;letter-spacing:.08em">📌 ${rn}</div>`:''
+  }${Object.entries(prizes).map(([pn,ws])=>`<div style="margin-bottom:12px;margin-left:${rn?'12px':'0'}"><div class="htitle">🎁 ${pn}</div>${ws.map((w,i)=>`<div class="wi"><span class="wi-rank">第 ${i+1} 位 · ${w.time}</span><span class="wi-name">🏆 ${w.name}</span><span class="wi-email">${w.email}</span><span class="wi-prize">${w.prizeName}</span></div>`).join('')}</div>`).join('')}</div>`).join('');
 }
 async function resetDraw(){
   if(!confirm('確定重置抽獎紀錄？（登記名單保留）'))return;
   await api('DELETE','/winners');
-  selPrize=-1;
+  selRound=-1; selPrize=-1;
   await reload(); renderTable(); renderHist(); renderPsel();
   document.getElementById('drawArea').style.display='none';
   document.getElementById('rwCard').style.display='none';
+  document.getElementById('prizeSelCard').style.display='none';
   toast('✅ 已重置抽獎紀錄');
 }
 function exportCSV(){
