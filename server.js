@@ -16,6 +16,7 @@ let db = {
     { name: '頭獎 🏆',count: 1, done: false },
   ],
   winners: [],  // { name, email, prizeName, time }
+  adminPin: '1234',
 };
 
 // Load from file if it exists
@@ -143,6 +144,24 @@ app.delete('/api/winners', (req, res) => {
   db.people.forEach(p => p.won = false);
   db.winners = [];
   db.prizes.forEach(p => p.done = false);
+  saveData();
+  res.json({ ok: true });
+});
+
+// ── Admin Auth ──
+app.post('/api/login', (req, res) => {
+  const { pin } = req.body;
+  if (!pin) return res.status(400).json({ ok: false, error: '請輸入密碼' });
+  if (pin === db.adminPin) return res.json({ ok: true });
+  res.json({ ok: false, error: '密碼錯誤' });
+});
+
+app.put('/api/admin-pin', (req, res) => {
+  const { oldPin, newPin } = req.body;
+  if (!oldPin || !newPin) return res.status(400).json({ ok: false, error: '請填寫完整' });
+  if (oldPin !== db.adminPin) return res.status(403).json({ ok: false, error: '舊密碼錯誤' });
+  if (newPin.length < 4) return res.status(400).json({ ok: false, error: '新密碼至少 4 碼' });
+  db.adminPin = newPin;
   saveData();
   res.json({ ok: true });
 });
