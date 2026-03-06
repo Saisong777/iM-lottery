@@ -95,6 +95,14 @@ body::before {
 #fl { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 890; transition: opacity .1s; }
 
 /* connection status */
+.psel { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
+.psb { padding: 8px 15px; border: 1px solid rgba(184,134,11,.38); background: var(--bg3); color: var(--text); font-family: 'Noto Serif TC', serif; font-size: .85rem; cursor: pointer; border-radius: 6px; transition: all .25s; }
+.psb.sel { background: linear-gradient(135deg,var(--gold-dim),var(--gold)); color: var(--bg); font-weight: 700; border-color: transparent; }
+.psb.done { opacity: .38; cursor: not-allowed; }
+.dbtn { display: block; margin: 16px auto 0; padding: 14px 46px; font-size: 1.1rem; font-weight: 900; letter-spacing: .22em; background: linear-gradient(135deg,#7B0000,var(--red-hi)); color: #FFF5CC; border: none; border-radius: 50px; cursor: pointer; font-family: 'Noto Serif TC', serif; box-shadow: 0 4px 22px rgba(231,76,60,.42),0 0 0 2px rgba(255,215,0,.18); transition: all .2s; position: relative; overflow: hidden; }
+.dbtn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg,rgba(255,255,255,.08),transparent); border-radius: inherit; }
+.dbtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(231,76,60,.62),0 0 0 2px rgba(255,215,0,.36); }
+.dbtn:disabled { opacity: .45; cursor: not-allowed; }
 .conn-status { position: fixed; top: 12px; right: 12px; z-index: 100; display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(16,16,26,.85); border: 1px solid rgba(184,134,11,.18); border-radius: 20px; font-size: .68rem; color: #555; }
 .conn-dot { width: 6px; height: 6px; border-radius: 50%; }
 .conn-dot.on { background: var(--green); animation: pulse 2s infinite; }
@@ -129,22 +137,28 @@ body::before {
   <div class="tab on" id="tab-draw">
     <div id="drawWaiting" class="waiting">
       <div class="waiting-icon">🎰</div>
-      <div class="waiting-text">等待管理員開始抽獎</div>
+      <div class="waiting-text">等待管理員選擇輪次</div>
       <div class="waiting-sub">請注意螢幕，精彩即將開始！</div>
     </div>
 
     <div id="drawActive" style="display:none;text-align:center">
-      <div class="round-badge" id="dRoundName"></div>
-      <div class="pbadge" id="dPrizeName" style="display:none"></div>
-      <div style="font-size:.8rem;color:#777;margin-bottom:8px" id="dPrizeCount" style="display:none"></div>
-      <div class="slot-wrap">
-        <div class="slot-frame">
-          <div class="slot-name" id="slotEl">？</div>
-          <div class="cdov" id="cdov" style="display:none"><div class="cdn" id="cdnEl">3</div></div>
+      <!-- Prize selector buttons -->
+      <div class="psel" id="prizeBtns"></div>
+
+      <!-- Draw area (shown after selecting a prize) -->
+      <div id="drawArea" style="display:none">
+        <div class="pbadge" id="dPrizeName"></div>
+        <div style="font-size:.8rem;color:#777;margin-bottom:8px" id="dPrizeCount"></div>
+        <div class="slot-wrap">
+          <div class="slot-frame">
+            <div class="slot-name" id="slotEl">？</div>
+            <div class="cdov" id="cdov" style="display:none"><div class="cdn" id="cdnEl">3</div></div>
+          </div>
         </div>
+        <button class="dbtn" id="dbtn" onclick="startDraw()">抽　獎</button>
+        <div class="mgrid" id="mgrid" style="display:none"></div>
+        <div id="recentWinners" style="margin-top:16px"></div>
       </div>
-      <div class="mgrid" id="mgrid" style="display:none"></div>
-      <div id="recentWinners" style="margin-top:16px"></div>
     </div>
   </div>
 
@@ -173,6 +187,8 @@ body::before {
 /* ══ STATE ══ */
 let db = { people:[], rounds:[], winners:[], activeRound:-1, activePrize:-1 };
 let isAnimating = false;
+let isDrawing = false;
+let selPrize = -1;
 let evtSource = null;
 
 /* ══ TABS ══ */
@@ -181,6 +197,14 @@ function stab(name,btn){
   document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
   document.getElementById('tab-'+name).classList.add('on');
   btn.classList.add('on');
+}
+
+/* ══ API ══ */
+async function api(method, path, body) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch('/api'+path, opts);
+  return r.json();
 }
 
 /* ══ AUDIO ══ */
@@ -242,31 +266,45 @@ function updateDrawView(){
   if(db.activeRound<0||!db.rounds[db.activeRound]){
     waiting.style.display='block';
     active.style.display='none';
+    selPrize=-1;
     return;
   }
   waiting.style.display='none';
   active.style.display='block';
   const round=db.rounds[db.activeRound];
-  document.getElementById('dRoundName').textContent=round.name;
 
-  if(db.activePrize>=0&&round.prizes[db.activePrize]){
-    const prize=round.prizes[db.activePrize];
-    document.getElementById('dPrizeName').style.display='inline-block';
+  // Render prize buttons
+  const pb=document.getElementById('prizeBtns');
+  if(!round.prizes.length){
+    pb.innerHTML='<div class="empty" style="padding:8px">此輪無獎項</div>';
+    document.getElementById('drawArea').style.display='none';
+    return;
+  }
+  pb.innerHTML=round.prizes.map((p,i)=>`<button class="psb ${p.done?'done':''} ${selPrize===i?'sel':''}" onclick="${p.done?'':'selectPrize('+i+')'}" ${p.done?'disabled':''}>${p.name||'獎項'+(i+1)}${p.done?' ✓':''}</button>`).join('');
+
+  // Show draw area if prize selected
+  if(selPrize>=0&&round.prizes[selPrize]&&!round.prizes[selPrize].done){
+    const prize=round.prizes[selPrize];
+    document.getElementById('drawArea').style.display='block';
     document.getElementById('dPrizeName').textContent=prize.name;
-    document.getElementById('dPrizeCount').style.display='block';
     document.getElementById('dPrizeCount').innerHTML='本獎項抽出 <b style="color:var(--gold)">'+prize.count+'</b> 位';
-  } else {
-    document.getElementById('dPrizeName').style.display='none';
-    document.getElementById('dPrizeCount').style.display='none';
+    if(!isAnimating){
+      document.getElementById('slotEl').textContent='？';
+      document.getElementById('slotEl').className='slot-name';
+      document.getElementById('mgrid').style.display='none';
+      document.getElementById('mgrid').innerHTML='';
+      document.getElementById('dbtn').disabled=false;
+      document.getElementById('dbtn').textContent='抽　獎';
+    }
+  } else if(!isAnimating) {
+    document.getElementById('drawArea').style.display='none';
   }
+}
 
-  // Reset slot
-  if(!isAnimating){
-    document.getElementById('slotEl').textContent='？';
-    document.getElementById('slotEl').className='slot-name';
-    document.getElementById('mgrid').style.display='none';
-    document.getElementById('mgrid').innerHTML='';
-  }
+function selectPrize(i){
+  selPrize=i;
+  document.getElementById('recentWinners').innerHTML='';
+  updateDrawView();
 }
 
 /* ══ DRAW ANIMATION ══ */
@@ -338,32 +376,29 @@ function animateMulti(picked,allNames){
   });
 }
 
-async function playDraw(data){
-  if(isAnimating)return;
-  isAnimating=true;
+async function startDraw(){
+  if(isDrawing||isAnimating)return;
+  if(db.activeRound<0||selPrize<0)return;
+  const avail=db.people.filter(p=>!p.won);
+  if(!avail.length){return;}
+  isDrawing=true; isAnimating=true;
+  document.getElementById('dbtn').disabled=true;
+  document.getElementById('dbtn').textContent='抽獎中...';
 
-  // Switch to draw tab
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
-  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
-  document.getElementById('tab-draw').classList.add('on');
-  document.querySelectorAll('.tb')[0].classList.add('on');
+  const res=await api('POST','/draw',{roundIndex:db.activeRound,prizeIndex:selPrize});
+  if(res.error){
+    isDrawing=false; isAnimating=false;
+    document.getElementById('dbtn').disabled=false;
+    document.getElementById('dbtn').textContent='抽　獎';
+    return;
+  }
 
-  // Show the round and prize
-  document.getElementById('drawWaiting').style.display='none';
-  document.getElementById('drawActive').style.display='block';
-  document.getElementById('dRoundName').textContent=data.round;
-  document.getElementById('dPrizeName').style.display='inline-block';
-  document.getElementById('dPrizeName').textContent=data.prize;
-  document.getElementById('dPrizeCount').style.display='block';
-  document.getElementById('dPrizeCount').innerHTML='本獎項抽出 <b style="color:var(--gold)">'+data.count+'</b> 位';
-  document.getElementById('slotEl').textContent='？';
-  document.getElementById('slotEl').className='slot-name';
+  const picked=res.winners;
+  const allNames=avail.map(p=>p.name);
+
+  document.getElementById('recentWinners').innerHTML='';
   document.getElementById('mgrid').style.display='none';
   document.getElementById('mgrid').innerHTML='';
-  document.getElementById('recentWinners').innerHTML='';
-
-  const picked=data.winners;
-  const allNames=data.allPeople;
 
   await countdown(3);
   if(picked.length===1) await animateSingle(picked[0],allNames);
@@ -371,15 +406,16 @@ async function playDraw(data){
 
   // Show recent winners
   const rw=document.getElementById('recentWinners');
-  rw.innerHTML=picked.map((w,i)=>`<div class="wi"><span class="wi-rank">第 ${i+1} 位</span><span class="wi-name">🏆 ${w.name}</span><span class="wi-prize">${data.prize}</span></div>`).join('');
+  rw.innerHTML=picked.map((w,i)=>`<div class="wi"><span class="wi-rank">第 ${i+1} 位</span><span class="wi-name">🏆 ${w.name}</span><span class="wi-prize">${res.prize}</span></div>`).join('');
 
-  // Update data
-  if(data.people) db.people=data.people;
-  if(data.allWinners) db.winners=data.allWinners;
-  if(data.rounds) db.rounds=data.rounds;
-  renderPeopleGrid();
-  renderHist();
-  isAnimating=false;
+  // Refresh data
+  const fresh=await api('GET','/data');
+  db.people=fresh.people; db.winners=fresh.winners; db.rounds=fresh.rounds;
+  db.activeRound=fresh.activeRound;
+  renderPeopleGrid(); renderHist();
+  isDrawing=false; isAnimating=false;
+  // Update prize buttons (mark done)
+  updateDrawView();
 }
 
 /* ══ SSE ══ */
@@ -399,30 +435,29 @@ function connectSSE(){
 
   evtSource.addEventListener('activeRound',e=>{
     const d=JSON.parse(e.data);
-    db.activeRound=d.activeRound; db.activePrize=d.activePrize;
+    db.activeRound=d.activeRound;
     if(d.rounds) db.rounds=d.rounds;
+    selPrize=-1; // reset prize selection when round changes
     updateDrawView();
-  });
-
-  evtSource.addEventListener('activePrize',e=>{
-    const d=JSON.parse(e.data);
-    db.activePrize=d.activePrize; db.activeRound=d.activeRound;
-    if(d.rounds) db.rounds=d.rounds;
-    updateDrawView();
-  });
-
-  evtSource.addEventListener('draw',e=>{
-    const d=JSON.parse(e.data);
-    playDraw(d);
   });
 
   evtSource.addEventListener('refresh',e=>{
+    if(isAnimating) return; // don't interrupt animation
     const d=JSON.parse(e.data);
     if(d.people) db.people=d.people;
     if(d.winners) db.winners=d.winners;
     if(d.rounds) db.rounds=d.rounds;
     if(d.activeRound!==undefined) db.activeRound=d.activeRound;
-    if(d.activePrize!==undefined) db.activePrize=d.activePrize;
+    renderPeopleGrid(); renderHist(); updateDrawView();
+  });
+
+  // Listen for draw events from other instances (just update data, no animation)
+  evtSource.addEventListener('draw',e=>{
+    if(isAnimating) return;
+    const d=JSON.parse(e.data);
+    if(d.people) db.people=d.people;
+    if(d.allWinners) db.winners=d.allWinners;
+    if(d.rounds) db.rounds=d.rounds;
     renderPeopleGrid(); renderHist(); updateDrawView();
   });
 

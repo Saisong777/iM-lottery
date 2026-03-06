@@ -78,10 +78,6 @@ textarea { resize: vertical; min-height: 100px; }
 .psb { padding: 8px 15px; border: 1px solid rgba(184,134,11,.38); background: var(--bg3); color: var(--text); font-family: 'Noto Serif TC', serif; font-size: .85rem; cursor: pointer; border-radius: 6px; transition: all .25s; }
 .psb.sel { background: linear-gradient(135deg,var(--gold-dim),var(--gold)); color: var(--bg); font-weight: 700; border-color: transparent; }
 .psb.done { opacity: .38; cursor: not-allowed; }
-.dbtn { display: block; margin: 16px auto 0; padding: 14px 46px; font-size: 1.1rem; font-weight: 900; letter-spacing: .22em; background: linear-gradient(135deg,#7B0000,var(--red-hi)); color: #FFF5CC; border: none; border-radius: 50px; cursor: pointer; font-family: 'Noto Serif TC', serif; box-shadow: 0 4px 22px rgba(231,76,60,.42),0 0 0 2px rgba(255,215,0,.18); transition: all .2s; position: relative; overflow: hidden; }
-.dbtn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg,rgba(255,255,255,.08),transparent); border-radius: inherit; }
-.dbtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(231,76,60,.62),0 0 0 2px rgba(255,215,0,.36); }
-.dbtn:disabled { opacity: .45; cursor: not-allowed; }
 .pbadge { display: inline-block; padding: 6px 22px; background: linear-gradient(135deg,var(--red),#700); border: 1px solid rgba(255,120,120,.25); border-radius: 30px; font-size: 1rem; font-weight: 700; letter-spacing: .1em; margin-bottom: 12px; color: #FFE; }
 .wi { display: flex; align-items: center; gap: 10px; padding: 8px 13px; background: linear-gradient(90deg,rgba(192,57,43,.14),transparent); border-left: 3px solid var(--red); margin-bottom: 7px; border-radius: 0 6px 6px 0; animation: slideIn .38s ease forwards; }
 @keyframes slideIn { from{opacity:0;transform:translateX(-18px);}to{opacity:1;transform:translateX(0);} }
@@ -210,18 +206,12 @@ textarea { resize: vertical; min-height: 100px; }
         <div class="psel" id="rsel"></div>
       </div>
 
-      <div class="card" id="prizeSelCard" style="display:none">
-        <div class="ct">選擇獎項 — <span id="curRoundName" style="color:var(--gold)"></span></div>
-        <div class="psel" id="psel"></div>
-      </div>
-
-      <div id="drawBtnArea" style="display:none;text-align:center">
-        <div class="card" style="text-align:center">
-          <div class="pbadge" id="curPrize">獎項</div>
-          <div style="font-size:.8rem;color:#777;margin-bottom:12px">本獎項抽出 <b id="prCnt" style="color:var(--gold)">1</b> 位</div>
-          <button class="dbtn" id="dbtn" onclick="startDraw()">抽　獎</button>
-          <div id="drawResult" style="margin-top:16px"></div>
+      <div class="card" id="roundStatusCard" style="display:none">
+        <div class="ct">目前狀態</div>
+        <div style="font-size:.88rem;color:var(--gold);text-align:center;padding:8px 0">
+          已選擇：<b id="curRoundStatus"></b>
         </div>
+        <div style="font-size:.78rem;color:#666;text-align:center">抽獎頁面已同步顯示此輪獎項，由抽獎頁面進行抽獎。</div>
       </div>
     </div>
 
@@ -258,9 +248,7 @@ textarea { resize: vertical; min-height: 100px; }
 <script>
 /* ══ STATE ══ */
 let db = { people:[], rounds:[], winners:[], activeRound:-1, activePrize:-1 };
-let isDrawing = false;
 let selRound = -1;
-let selPrize = -1;
 let loggedIn = false;
 
 /* ══ TOAST ══ */
@@ -281,7 +269,6 @@ async function reload() {
   const data = await api('GET','/data');
   db = data;
   selRound = db.activeRound !== undefined ? db.activeRound : -1;
-  selPrize = db.activePrize !== undefined ? db.activePrize : -1;
 }
 
 /* ══ LOGIN ══ */
@@ -398,27 +385,13 @@ function renderRounds(){
   </div>`).join('');
 }
 
-/* ── Draw Control ── */
+/* ── Draw Control (round selector only) ── */
 function renderCtrl(){
   renderRsel();
-  const ps=document.getElementById('psel');
-  const pc=document.getElementById('prizeSelCard');
-  const da=document.getElementById('drawBtnArea');
-  if(selRound<0||!db.rounds[selRound]){pc.style.display='none';da.style.display='none';return;}
-  pc.style.display='block';
-  const r=db.rounds[selRound];
-  document.getElementById('curRoundName').textContent=r.name;
-  if(!r.prizes.length){ps.innerHTML='<div class="empty" style="padding:8px">此輪無獎項</div>';da.style.display='none';return;}
-  ps.innerHTML=r.prizes.map((p,i)=>`<button class="psb ${p.done?'done':''} ${selPrize===i?'sel':''}" onclick="${p.done?'':'selectPrize('+i+')'}" ${p.done?'disabled':''}>${p.name||'獎項'+(i+1)}${p.done?' ✓':''}</button>`).join('');
-  if(selPrize>=0&&r.prizes[selPrize]&&!r.prizes[selPrize].done){
-    da.style.display='block';
-    document.getElementById('curPrize').textContent=r.prizes[selPrize].name;
-    document.getElementById('prCnt').textContent=r.prizes[selPrize].count;
-    document.getElementById('drawResult').innerHTML='';
-    document.getElementById('dbtn').disabled=false;
-  } else {
-    da.style.display='none';
-  }
+  const sc=document.getElementById('roundStatusCard');
+  if(selRound<0||!db.rounds[selRound]){sc.style.display='none';return;}
+  sc.style.display='block';
+  document.getElementById('curRoundStatus').textContent=db.rounds[selRound].name;
 }
 function renderRsel(){
   const rs=document.getElementById('rsel');
@@ -429,36 +402,10 @@ function renderRsel(){
   }).join('');
 }
 async function selectRound(i){
-  selRound=i; selPrize=-1;
+  selRound=i;
   await api('PUT','/active-round',{roundIndex:i});
   renderCtrl();
-}
-async function selectPrize(i){
-  selPrize=i;
-  await api('PUT','/active-prize',{prizeIndex:i});
-  renderCtrl();
-}
-
-async function startDraw(){
-  if(isDrawing)return;
-  const avail=db.people.filter(p=>!p.won);
-  if(!avail.length){toast('沒有可抽的參與者！');return;}
-  isDrawing=true; document.getElementById('dbtn').disabled=true;
-  document.getElementById('dbtn').textContent='抽獎中...';
-
-  const res=await api('POST','/draw',{roundIndex:selRound,prizeIndex:selPrize});
-  if(res.error){toast('⚠️ '+res.error);isDrawing=false;document.getElementById('dbtn').disabled=false;document.getElementById('dbtn').textContent='抽　獎';return;}
-
-  // Show result on admin side (simple list)
-  const dr=document.getElementById('drawResult');
-  dr.innerHTML='<div style="margin-top:12px">'+res.winners.map((w,i)=>`<div class="wi"><span class="wi-rank">第 ${i+1} 位</span><span class="wi-name">🏆 ${w.name}</span><span class="wi-email">${w.email}</span><span class="wi-prize">${res.prize}</span></div>`).join('')+'</div>';
-
-  toast('✅ 抽獎完成！抽獎頁面正在播放動畫');
-  await reload(); renderTable();
-  db.rounds[selRound].prizes[selPrize].done=true;
-  renderCtrl(); renderHist();
-  isDrawing=false;
-  document.getElementById('dbtn').textContent='抽　獎';
+  toast('✅ 已切換至「'+db.rounds[i].name+'」，抽獎頁面已同步');
 }
 
 /* ── History ── */
