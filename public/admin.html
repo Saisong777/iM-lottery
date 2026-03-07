@@ -349,10 +349,12 @@ function renderTable(){
 }
 
 /* ── Rounds / Prizes Settings ── */
-function addRound(){db.rounds.push({name:'第'+(db.rounds.length+1)+'輪',prizes:[]});renderRounds();}
-function delRound(ri){if(!confirm('確定刪除「'+db.rounds[ri].name+'」？'))return;db.rounds.splice(ri,1);renderRounds();}
-function addPrizeToRound(ri){db.rounds[ri].prizes.push({name:'',count:1,done:false});renderRounds();}
-function delPrize(ri,pi){db.rounds[ri].prizes.splice(pi,1);renderRounds();}
+let _saveTimer=null;
+function autoSaveRounds(){clearTimeout(_saveTimer);_saveTimer=setTimeout(()=>saveRounds(true),500);}
+function addRound(){db.rounds.push({name:'第'+(db.rounds.length+1)+'輪',prizes:[]});renderRounds();autoSaveRounds();}
+function delRound(ri){if(!confirm('確定刪除「'+db.rounds[ri].name+'」？'))return;db.rounds.splice(ri,1);renderRounds();autoSaveRounds();}
+function addPrizeToRound(ri){db.rounds[ri].prizes.push({name:'',count:1,done:false});renderRounds();autoSaveRounds();}
+function delPrize(ri,pi){db.rounds[ri].prizes.splice(pi,1);renderRounds();autoSaveRounds();}
 function loadDefaultRounds(){
   db.rounds=[
     {name:'第一輪',prizes:[{name:'安慰獎',count:5,done:false}]},
@@ -360,9 +362,9 @@ function loadDefaultRounds(){
     {name:'第三輪',prizes:[{name:'頭獎 🏆',count:1,done:false}]}
   ];renderRounds();
 }
-async function saveRounds(){
+async function saveRounds(silent){
   await api('PUT','/rounds',{rounds:db.rounds});
-  toast('✅ 設定已儲存');
+  if(!silent) toast('✅ 設定已儲存');
 }
 function renderRounds(){
   const el=document.getElementById('roundsList');
@@ -370,13 +372,13 @@ function renderRounds(){
   el.innerHTML=db.rounds.map((r,ri)=>`<div class="card" style="margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
       <div class="pnum">${ri+1}</div>
-      <input type="text" value="${r.name}" placeholder="輪次名稱" oninput="db.rounds[${ri}].name=this.value" style="flex:1;font-weight:700">
+      <input type="text" value="${r.name}" placeholder="輪次名稱" oninput="db.rounds[${ri}].name=this.value;autoSaveRounds()" style="flex:1;font-weight:700">
       <button class="btn btn-r btn-sm" onclick="delRound(${ri})">刪除輪次</button>
     </div>
     <div class="plist">${r.prizes.length?r.prizes.map((p,pi)=>`<div class="pitem">
       <div class="pnum" style="width:20px;height:20px;font-size:.65rem">${pi+1}</div>
-      <input type="text" value="${p.name}" placeholder="獎項名稱" oninput="db.rounds[${ri}].prizes[${pi}].name=this.value">
-      <input type="number" class="pcnt" value="${p.count}" min="1" max="99" oninput="db.rounds[${ri}].prizes[${pi}].count=parseInt(this.value)||1" title="抽出人數">
+      <input type="text" value="${p.name}" placeholder="獎項名稱" oninput="db.rounds[${ri}].prizes[${pi}].name=this.value;autoSaveRounds()">
+      <input type="number" class="pcnt" value="${p.count}" min="1" max="99" oninput="db.rounds[${ri}].prizes[${pi}].count=parseInt(this.value)||1;autoSaveRounds()" title="抽出人數">
       <span style="font-size:.7rem;color:#555">人</span>
       <button class="btn btn-r btn-sm" onclick="delPrize(${ri},${pi})">刪除</button>
     </div>`).join(''):'<div class="empty" style="padding:6px;font-size:.78rem">此輪尚無獎項</div>'}</div>
