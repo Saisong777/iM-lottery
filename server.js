@@ -8,7 +8,7 @@ const DATA_FILE = path.join(__dirname, 'data.json');
 
 // ── In-memory store (backed by data.json for persistence) ──
 let db = {
-  people: [],   // { name, email, won }
+  people: [],   // { name, won }
   rounds: [
     {
       name: '第一輪',
@@ -30,7 +30,7 @@ let db = {
       ],
     },
   ],
-  winners: [],  // { name, email, prizeName, roundName, time }
+  winners: [],  // { name, prizeName, roundName, time }
   adminPin: '1234',
   activeRound: -1,   // which round is shown on draw page
   activePrize: -1,   // which prize is selected on draw page
@@ -112,12 +112,12 @@ app.get('/api/data', (req, res) => {
 
 // ── People ──
 app.post('/api/people', (req, res) => {
-  const { name, email } = req.body;
-  if (!name || !email) return res.status(400).json({ error: '姓名與 Email 為必填' });
-  if (db.people.find(p => p.email === email)) {
-    return res.status(409).json({ error: '此 Email 已登記' });
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: '姓名為必填' });
+  if (db.people.find(p => p.name === name)) {
+    return res.status(409).json({ error: '此姓名已登記' });
   }
-  const person = { name, email, won: false };
+  const person = { name, won: false };
   db.people.push(person);
   saveData();
   broadcast('refresh', { people: db.people, winners: db.winners });
@@ -137,9 +137,9 @@ app.delete('/api/people/:index', (req, res) => {
 app.post('/api/people/batch', (req, res) => {
   const { lines } = req.body; // array of {name, email}
   let added = 0;
-  lines.forEach(({ name, email }) => {
+  lines.forEach(({ name }) => {
     if (name && !db.people.find(p => p.name === name)) {
-      db.people.push({ name, email: email || '', won: false });
+      db.people.push({ name, won: false });
       added++;
     }
   });
@@ -211,9 +211,9 @@ app.post('/api/draw', (req, res) => {
   // Mark as won
   const time = new Date().toLocaleTimeString('zh-TW');
   picked.forEach(p => {
-    const person = db.people.find(x => x.email === p.email);
+    const person = db.people.find(x => x.name === p.name);
     if (person) person.won = true;
-    db.winners.push({ name: p.name, email: p.email, prizeName: prize.name, roundName: round.name, time });
+    db.winners.push({ name: p.name, prizeName: prize.name, roundName: round.name, time });
   });
   prize.done = true;
   saveData();
@@ -267,7 +267,7 @@ app.put('/api/admin-pin', (req, res) => {
 
 // ── Export ──
 app.get('/api/export', (req, res) => {
-  const rows = ['\uFEFF名次,姓名,Email,輪次,獎項,時間'];
+  const rows = ['\uFEFF名次,姓名,輪次,獎項,時間'];
   const grp = {};
   db.winners.forEach(w => {
     const key = (w.roundName || '') + '|' + w.prizeName;
@@ -275,7 +275,7 @@ app.get('/api/export', (req, res) => {
     grp[key].push(w);
   });
   Object.values(grp).forEach(ws =>
-    ws.forEach((w, i) => rows.push(`${i+1},${w.name},${w.email},${w.roundName||''},${w.prizeName},${w.time}`))
+    ws.forEach((w, i) => rows.push(`${i+1},${w.name},${w.roundName||''},${w.prizeName},${w.time}`))
   );
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="winners.csv"');
