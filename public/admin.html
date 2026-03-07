@@ -149,18 +149,17 @@ textarea { resize: vertical; min-height: 100px; }
         <div class="ct">手動新增參與者</div>
         <div class="row">
           <input type="text" id="aN" placeholder="姓名（必填）">
-          <input type="email" id="aE" placeholder="Email（選填）" style="flex:1.4">
           <button class="btn btn-g" onclick="adminAdd()">新增</button>
         </div>
-        <textarea id="batch" placeholder="批次新增（一行一人）&#10;格式：姓名  或  姓名,email&#10;&#10;王大明&#10;李小花,flower@gmail.com"></textarea>
+        <textarea id="batch" placeholder="批次新增（一行一人）&#10;&#10;王大明&#10;李小花&#10;陳志偉"></textarea>
         <button class="btn btn-o btn-sm" style="margin-top:7px" onclick="doBatch()">批次匯入</button>
       </div>
       <div class="card">
         <div class="ct">登記名單</div>
         <div style="overflow-x:auto">
           <table class="rtbl">
-            <thead><tr><th>#</th><th>姓名</th><th>Email</th><th>狀態</th><th>操作</th></tr></thead>
-            <tbody id="rtbody"><tr><td colspan="5" class="empty">尚無登記者</td></tr></tbody>
+            <thead><tr><th>#</th><th>姓名</th><th>狀態</th><th>操作</th></tr></thead>
+            <tbody id="rtbody"><tr><td colspan="4" class="empty">尚無登記者</td></tr></tbody>
           </table>
         </div>
         <div class="stats">
@@ -309,17 +308,17 @@ function atab(name,btn){
 
 /* ── People ── */
 async function adminAdd(){
-  const n=document.getElementById('aN').value.trim(), e=document.getElementById('aE').value.trim();
+  const n=document.getElementById('aN').value.trim();
   if(!n){toast('請輸入姓名');return;}
-  const res=await api('POST','/people',{name:n,email:e||n+'@placeholder'});
+  const res=await api('POST','/people',{name:n});
   if(res.error){toast('⚠️ '+res.error);return;}
-  document.getElementById('aN').value=''; document.getElementById('aE').value='';
+  document.getElementById('aN').value='';
   db.people.push(res.person); renderTable(); toast('✅ 已新增 '+n);
 }
 async function doBatch(){
   const txt=document.getElementById('batch').value.trim();
   if(!txt)return;
-  const lines=txt.split('\n').map(l=>{const p=l.trim().split(',');return{name:p[0]?.trim(),email:p[1]?.trim()||''};}).filter(x=>x.name);
+  const lines=txt.split('\n').map(l=>({name:l.trim()})).filter(x=>x.name);
   const res=await api('POST','/people/batch',{lines});
   document.getElementById('batch').value='';
   await reload(); renderTable(); toast(`✅ 成功新增 ${res.added} 人`);
@@ -329,7 +328,7 @@ async function removePerson(i){
   await reload(); renderTable();
 }
 async function loadSample(){
-  const lines=[['王大明','wang@church.org'],['李小花','li@gmail.com'],['陳志偉','chen@gmail.com'],['林美珍','lin@gmail.com'],['張建宏','chang@gmail.com'],['吳淑惠','wu@gmail.com'],['劉家豪','liu@gmail.com'],['黃雅婷','huang@gmail.com'],['蔡俊傑','tsai@gmail.com'],['許文婷','hsu@gmail.com'],['謝宗翰','hsieh@gmail.com'],['楊雅雯','yang@gmail.com']].map(([name,email])=>({name,email}));
+  const lines=['王大明','李小花','陳志偉','林美珍','張建宏','吳淑惠','劉家豪','黃雅婷','蔡俊傑','許文婷','謝宗翰','楊雅雯'].map(name=>({name}));
   const res=await api('POST','/people/batch',{lines});
   await reload(); renderTable(); toast(`✅ 範例名單已載入（新增 ${res.added} 人）`);
 }
@@ -341,8 +340,8 @@ async function clearAll(){
 }
 function renderTable(){
   const tb=document.getElementById('rtbody');
-  if(!db.people.length){tb.innerHTML='<tr><td colspan="5" class="empty">尚無登記者</td></tr>';}
-  else{tb.innerHTML=db.people.map((p,i)=>`<tr><td>${i+1}</td><td>${p.name}</td><td style="color:#666">${p.email||'—'}</td><td>${p.won?'<span class="won-lbl">🏆 已中獎</span>':'<span class="ok">✓ 可抽</span>'}</td><td>${p.won?'—':`<button class="btn btn-r btn-sm" onclick="removePerson(${i})">移除</button>`}</td></tr>`).join('');}
+  if(!db.people.length){tb.innerHTML='<tr><td colspan="4" class="empty">尚無登記者</td></tr>';}
+  else{tb.innerHTML=db.people.map((p,i)=>`<tr><td>${i+1}</td><td>${p.name}</td><td>${p.won?'<span class="won-lbl">🏆 已中獎</span>':'<span class="ok">✓ 可抽</span>'}</td><td>${p.won?'—':`<button class="btn btn-r btn-sm" onclick="removePerson(${i})">移除</button>`}</td></tr>`).join('');}
   const tot=db.people.length, w=db.people.filter(p=>p.won).length;
   document.getElementById('tC').textContent=tot;
   document.getElementById('aC').textContent=tot-w;
@@ -350,10 +349,12 @@ function renderTable(){
 }
 
 /* ── Rounds / Prizes Settings ── */
-function addRound(){db.rounds.push({name:'第'+(db.rounds.length+1)+'輪',prizes:[]});renderRounds();}
-function delRound(ri){if(!confirm('確定刪除「'+db.rounds[ri].name+'」？'))return;db.rounds.splice(ri,1);renderRounds();}
-function addPrizeToRound(ri){db.rounds[ri].prizes.push({name:'',count:1,done:false});renderRounds();}
-function delPrize(ri,pi){db.rounds[ri].prizes.splice(pi,1);renderRounds();}
+let _saveTimer=null;
+function autoSaveRounds(){clearTimeout(_saveTimer);_saveTimer=setTimeout(()=>saveRounds(true),500);}
+function addRound(){db.rounds.push({name:'第'+(db.rounds.length+1)+'輪',prizes:[]});renderRounds();autoSaveRounds();}
+function delRound(ri){if(!confirm('確定刪除「'+db.rounds[ri].name+'」？'))return;db.rounds.splice(ri,1);renderRounds();autoSaveRounds();}
+function addPrizeToRound(ri){db.rounds[ri].prizes.push({name:'',count:1,done:false});renderRounds();autoSaveRounds();}
+function delPrize(ri,pi){db.rounds[ri].prizes.splice(pi,1);renderRounds();autoSaveRounds();}
 function loadDefaultRounds(){
   db.rounds=[
     {name:'第一輪',prizes:[{name:'安慰獎',count:5,done:false}]},
@@ -361,9 +362,9 @@ function loadDefaultRounds(){
     {name:'第三輪',prizes:[{name:'頭獎 🏆',count:1,done:false}]}
   ];renderRounds();
 }
-async function saveRounds(){
+async function saveRounds(silent){
   await api('PUT','/rounds',{rounds:db.rounds});
-  toast('✅ 設定已儲存');
+  if(!silent) toast('✅ 設定已儲存');
 }
 function renderRounds(){
   const el=document.getElementById('roundsList');
@@ -371,13 +372,13 @@ function renderRounds(){
   el.innerHTML=db.rounds.map((r,ri)=>`<div class="card" style="margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
       <div class="pnum">${ri+1}</div>
-      <input type="text" value="${r.name}" placeholder="輪次名稱" oninput="db.rounds[${ri}].name=this.value" style="flex:1;font-weight:700">
+      <input type="text" value="${r.name}" placeholder="輪次名稱" oninput="db.rounds[${ri}].name=this.value;autoSaveRounds()" style="flex:1;font-weight:700">
       <button class="btn btn-r btn-sm" onclick="delRound(${ri})">刪除輪次</button>
     </div>
     <div class="plist">${r.prizes.length?r.prizes.map((p,pi)=>`<div class="pitem">
       <div class="pnum" style="width:20px;height:20px;font-size:.65rem">${pi+1}</div>
-      <input type="text" value="${p.name}" placeholder="獎項名稱" oninput="db.rounds[${ri}].prizes[${pi}].name=this.value">
-      <input type="number" class="pcnt" value="${p.count}" min="1" max="99" oninput="db.rounds[${ri}].prizes[${pi}].count=parseInt(this.value)||1" title="抽出人數">
+      <input type="text" value="${p.name}" placeholder="獎項名稱" oninput="db.rounds[${ri}].prizes[${pi}].name=this.value;autoSaveRounds()">
+      <input type="number" class="pcnt" value="${p.count}" min="1" max="99" oninput="db.rounds[${ri}].prizes[${pi}].count=parseInt(this.value)||1;autoSaveRounds()" title="抽出人數">
       <span style="font-size:.7rem;color:#555">人</span>
       <button class="btn btn-r btn-sm" onclick="delPrize(${ri},${pi})">刪除</button>
     </div>`).join(''):'<div class="empty" style="padding:6px;font-size:.78rem">此輪尚無獎項</div>'}</div>
@@ -420,7 +421,7 @@ function renderHist(){
     rgrp[rn][w.prizeName].push(w);
   });
   h.innerHTML=Object.entries(rgrp).map(([rn,prizes])=>`<div style="margin-bottom:20px">${rn?`<div style="font-size:.88rem;font-weight:700;color:var(--gold);margin-bottom:8px;letter-spacing:.08em">📌 ${rn}</div>`:''
-  }${Object.entries(prizes).map(([pn,ws])=>`<div style="margin-bottom:12px;margin-left:${rn?'12px':'0'}"><div class="htitle">🎁 ${pn}</div>${ws.map((w,i)=>`<div class="wi"><span class="wi-rank">第 ${i+1} 位 · ${w.time}</span><span class="wi-name">🏆 ${w.name}</span><span class="wi-email">${w.email}</span><span class="wi-prize">${w.prizeName}</span></div>`).join('')}</div>`).join('')}</div>`).join('');
+  }${Object.entries(prizes).map(([pn,ws])=>`<div style="margin-bottom:12px;margin-left:${rn?'12px':'0'}"><div class="htitle">🎁 ${pn}</div>${ws.map((w,i)=>`<div class="wi"><span class="wi-rank">第 ${i+1} 位 · ${w.time}</span><span class="wi-name">🏆 ${w.name}</span><span class="wi-prize">${w.prizeName}</span></div>`).join('')}</div>`).join('')}</div>`).join('');
 }
 async function resetDraw(){
   if(!confirm('確定重置抽獎紀錄？（登記名單保留）'))return;

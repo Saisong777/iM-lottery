@@ -87,13 +87,11 @@ body::before {
   <div class="reg-hero">
     <span class="reg-emoji">🎊</span>
     <div class="reg-title">歡迎登記抽獎！</div>
-    <p class="reg-desc">請填寫您的姓名與 Email<br>完成登記後即可參加今晚的幸運抽獎 🎁</p>
+    <p class="reg-desc">請填寫您的姓名<br>完成登記後即可參加今晚的幸運抽獎 🎁</p>
   </div>
   <div class="reg-card">
     <label class="f-label" for="rName">姓　名 <em>*</em></label>
     <input class="f-input" type="text" id="rName" placeholder="請輸入您的姓名" autocomplete="off">
-    <label class="f-label" for="rEmail">電子郵件 <em>*</em></label>
-    <input class="f-input" type="email" id="rEmail" placeholder="example@gmail.com" autocomplete="off">
     <button class="reg-submit" id="regBtn" onclick="doRegister()">確認登記，加入抽獎 🎉</button>
   </div>
   <div class="reg-tally">目前已有 <b id="regCnt">0</b> 位會友完成登記</div>
@@ -164,27 +162,25 @@ const playSuccess=()=>[440,550,660].forEach((f,i)=>setTimeout(()=>tone(f,.35,'si
 
 /* ── REGISTRATION ── */
 async function doRegister() {
-  const nE=document.getElementById('rName'), eE=document.getElementById('rEmail');
-  const n=nE.value.trim(), e=eE.value.trim();
-  nE.classList.remove('err'); eE.classList.remove('err');
+  const nE=document.getElementById('rName');
+  const n=nE.value.trim();
+  nE.classList.remove('err');
   if(!n){nE.classList.add('err');nE.focus();return;}
-  if(!e||!e.includes('@')){eE.classList.add('err');eE.focus();return;}
   const btn=document.getElementById('regBtn');
   btn.disabled=true; btn.textContent='登記中...';
-  const res = await api('POST','/people',{name:n,email:e});
+  const res = await api('POST','/people',{name:n});
   btn.disabled=false; btn.textContent='確認登記，加入抽獎 🎉';
   if(res.error){
-    eE.classList.add('err'); toast('⚠️ '+res.error); return;
+    nE.classList.add('err'); toast('⚠️ '+res.error); return;
   }
-  nE.value=''; eE.value=''; nE.focus();
+  nE.value=''; nE.focus();
   document.getElementById('regCnt').textContent = res.total;
   document.getElementById('sName').textContent = n+'，歡迎！';
   const v=document.getElementById('sv');
   v.classList.add('on'); playSuccess(); burst();
   setTimeout(()=>v.classList.remove('on'),2300);
 }
-document.getElementById('rName').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('rEmail').focus();});
-document.getElementById('rEmail').addEventListener('keydown',e=>{if(e.key==='Enter')doRegister();});
+document.getElementById('rName').addEventListener('keydown',e=>{if(e.key==='Enter')doRegister();});
 
 /* ── LOGIN ── */
 function openPin(){

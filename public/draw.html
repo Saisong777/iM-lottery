@@ -258,7 +258,7 @@ function renderHist(){
     rgrp[rn][w.prizeName].push(w);
   });
   h.innerHTML=Object.entries(rgrp).map(([rn,prizes])=>`<div style="margin-bottom:20px">${rn?`<div style="font-size:.88rem;font-weight:700;color:var(--gold);margin-bottom:8px;letter-spacing:.08em">📌 ${rn}</div>`:''
-  }${Object.entries(prizes).map(([pn,ws])=>`<div style="margin-bottom:12px;margin-left:${rn?'12px':'0'}"><div class="htitle">🎁 ${pn}</div>${ws.map((w,i)=>`<div class="wi"><span class="wi-rank">第 ${i+1} 位 · ${w.time}</span><span class="wi-name">🏆 ${w.name}</span><span class="wi-email">${w.email}</span><span class="wi-prize">${w.prizeName}</span></div>`).join('')}</div>`).join('')}</div>`).join('');
+  }${Object.entries(prizes).map(([pn,ws])=>`<div style="margin-bottom:12px;margin-left:${rn?'12px':'0'}"><div class="htitle">🎁 ${pn}</div>${ws.map((w,i)=>`<div class="wi"><span class="wi-rank">第 ${i+1} 位 · ${w.time}</span><span class="wi-name">🏆 ${w.name}</span><span class="wi-prize">${w.prizeName}</span></div>`).join('')}</div>`).join('')}</div>`).join('');
 }
 
 function updateDrawView(){
